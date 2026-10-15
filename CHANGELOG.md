@@ -47,6 +47,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `uses_credential`.
 - Example project: weather (public API), RSS (user URL through `safe_fetch`, DTDs refused) and
   GitHub (stored token) widgets with custom renderers and tests.
+- Documentation: full README, CONTRIBUTING, research notes, design decisions.
+- Packaging: CI job installing the built wheel in a fresh virtualenv and running the example
+  against it; `Release` workflow publishing tags to TestPyPI through trusted publishing.
 
 ### Security
 

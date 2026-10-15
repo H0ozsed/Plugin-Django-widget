@@ -1,0 +1,52 @@
+name: Release
+
+# Pushing a tag vX.Y.Z builds the package and publishes it to TestPyPI with trusted publishing
+# (OIDC, no token stored in the repository). Publishing to the real PyPI is deliberately not
+# automated: it is done only after the maintainer confirms a TestPyPI release.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Tag must match widget_hub.__version__
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/widget_hub/__init__.py)
+          echo "tag=$TAG version=$VERSION"
+          test "v$VERSION" = "$TAG"
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/django-widget-hub
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/

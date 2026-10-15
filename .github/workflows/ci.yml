@@ -30,6 +30,30 @@ jobs:
       - run: node --check src/widget_hub/static/widget_hub/dashboard.js
       - run: node --test "tests/js/*.test.js"
 
+  package:
+    # Build the sdist/wheel and run the example project against the *installed* wheel.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - name: Install the wheel in a fresh virtualenv
+        run: |
+          python -m venv /tmp/fresh
+          /tmp/fresh/bin/pip install "$(ls dist/*.whl)[ninja,drf]" pytest pytest-django
+      - name: Run the example against the installed package
+        run: |
+          cp -r example /tmp/example
+          cd /tmp/example
+          /tmp/fresh/bin/python -c "import widget_hub; assert 'site-packages' in widget_hub.__file__"
+          /tmp/fresh/bin/python manage.py check
+          /tmp/fresh/bin/python manage.py migrate --noinput
+          /tmp/fresh/bin/python -m pytest -p no:cacheprovider demo_widgets --ds=example_project.settings
+
   test:
     name: py${{ matrix.python }} / Django ${{ matrix.django }}
     runs-on: ubuntu-latest

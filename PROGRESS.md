@@ -3,7 +3,7 @@
 Live checklist for `django-widget-hub` (import `widget_hub`, setting `WIDGET_HUB`).
 After a session restart, read this first and resume from the first unchecked step.
 
-**Current step:** 14 — Documentation and packaging
+**Current step:** 15 — Integration proof (Epitech dashboard)
 
 ## Plan (one feature = one commit = one push)
 
@@ -20,10 +20,13 @@ After a session restart, read this first and resume from the first unchecked ste
 - [x] 11. Security helpers: `safe_fetch()` (SSRF) and encrypted credential store (Fernet)
 - [x] 12. Built-in front: `{% dashboard %}`, JS grid/drag/resize/settings/refresh, CSS light/dark
 - [x] 13. Example project with 3 widgets (public API, user URL via `safe_fetch`, stored credential)
-- [ ] 14. Documentation and packaging (README, docs, CHANGELOG, CONTRIBUTING, build + install in fresh venv, TestPyPI release workflow)
+- [x] 14. Documentation and packaging (README, docs, CHANGELOG, CONTRIBUTING, build + install in fresh venv, TestPyPI release workflow)
 - [ ] 15. Integration proof against the Epitech dashboard + `docs/migration-epitech.md`
 
 ## Open questions
 
 - None blocking. Step 15 is carried out inside this repository (see `docs/decisions.md`, D1).
 - Publishing to the real PyPI waits for explicit confirmation.
+- TestPyPI trusted publisher must be configured by the maintainer before the first tag
+  (project `django-widget-hub`, repository `H0ozsed/Plugin-Django-widget`, workflow
+  `release.yml`, environment `testpypi`).

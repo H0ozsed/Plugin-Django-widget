@@ -153,6 +153,20 @@ Each entry: problem → options → choice → why → impact.
   data is inserted with `textContent` and only `http(s)` URLs become links or images. Overlapping
   placements are refused rather than pushing other widgets around, which keeps the logic small.
 
+## D15. Release pipeline
+
+- **Problem:** releases must be reproducible, versioned in one place, published to TestPyPI
+  without a token in the repository, and never reach the real PyPI without the maintainer.
+- **Choice:** a `Release` workflow on `vX.Y.Z` tags: it checks the tag against
+  `widget_hub.__version__`, builds, runs `twine check --strict` and publishes to TestPyPI with
+  `pypa/gh-action-pypi-publish` and OIDC trusted publishing (`environment: testpypi`,
+  `id-token: write`). There is deliberately no PyPI job yet. CI also builds the wheel, installs it
+  in a fresh virtualenv and runs the example project against it, so packaging mistakes (missing
+  templates, static files or migrations) fail before a release.
+- **Impact:** the TestPyPI project must be configured once with this repository, workflow
+  `release.yml` and environment `testpypi` as a trusted publisher (a maintainer action). The
+  README image uses an absolute URL so it renders on (Test)PyPI.
+
 ## D10. `/about.json` client host and param types
 
 - **Problem:** the Epitech code trusted `X-Forwarded-For` unconditionally (spoofable when no proxy
