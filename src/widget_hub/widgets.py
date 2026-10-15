@@ -23,7 +23,7 @@ from typing import Any, ClassVar
 
 from django.core.exceptions import ImproperlyConfigured
 
-from .params import Param, check_name
+from .params import Param, check_name, validate_params
 
 
 class Service:
@@ -79,6 +79,22 @@ class Widget:
             seen.add(param.name)
         if not isinstance(cls.default_refresh_rate, int) or cls.default_refresh_rate <= 0:
             raise ImproperlyConfigured(f"{label}.default_refresh_rate must be a positive integer.")
+
+    @classmethod
+    def validate(cls, data: Any) -> dict[str, Any]:
+        """Validate submitted parameter values; see :func:`widget_hub.params.validate_params`."""
+        return validate_params(cls.params, data)
+
+    @classmethod
+    def schema(cls) -> dict[str, Any]:
+        """Return the JSON-serialisable description of this widget (used by forms and clients)."""
+        return {
+            "service": cls.service.name,
+            "name": cls.name,
+            "description": cls.description,
+            "default_refresh_rate": cls.default_refresh_rate,
+            "params": [p.to_schema() for p in cls.params],
+        }
 
     def fetch(self, params: dict[str, Any], context: Any) -> Any:
         """Return JSON-serialisable data for one widget instance.

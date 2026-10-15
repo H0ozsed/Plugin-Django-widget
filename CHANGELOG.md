@@ -13,3 +13,5 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Declaration API: `Service`, `Widget`, typed params (`String`, `Integer`, `Boolean`, `Choice`,
   `Url`), `@register`, and a registry that refuses duplicate service or widget names at startup.
   `<app>/widgets.py` modules are autodiscovered.
+- Parameter validation (`Widget.validate`, `ParamValidationError`) with per-field messages,
+  defaults, bounds, choices, URL checks, unknown-key rejection; `Widget.schema()` for clients.
