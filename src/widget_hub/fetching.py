@@ -71,15 +71,78 @@ def cached_fetch(
     Failures are cached for the same period, so a failing upstream is not retried more often
     than a working one: :class:`WidgetError` is re-raised as is; any other exception, a timeout
     or a non-JSON result is logged and becomes :class:`WidgetUnavailable`.
+
+    Concurrent misses on the same key in one process are coalesced ("single flight"): the first
+    caller runs ``fetch()``, the others wait for its outcome instead of calling the upstream API
+    too. Across processes, the shared cache backend plays that role once the first call ends.
     """
     cache = caches[conf.get("CACHE_ALIAS")]
     key = cache_key(widget, params, owner_id)
+    cached = _from_cache(cache, key, max_age)
+    if cached is not None:
+        return cached
+    with _flights_lock:
+        flight = _flights.get(key)
+        leader = flight is None
+        if leader:
+            flight = _flights[key] = _Flight()
+    if not leader:
+        return flight.wait(float(conf.get("FETCH_TIMEOUT")) + 1.0)
+    try:
+        outcome = _fetch_and_store(cache, key, widget, params, context, max_age)
+    except Exception as exc:
+        flight.fail(exc)
+        raise
+    else:
+        flight.succeed(outcome)
+        return outcome
+    finally:
+        with _flights_lock:
+            _flights.pop(key, None)
+
+
+class _Flight:
+    """Outcome of an in-progress ``fetch()``, shared with callers asking for the same key."""
+
+    def __init__(self) -> None:
+        self._done = threading.Event()
+        self._result: FetchResult | None = None
+        self._error: list[Any] | None = None
+
+    def succeed(self, result: FetchResult) -> None:
+        self._result = result
+        self._done.set()
+
+    def fail(self, exc: Exception) -> None:
+        # Followers get fresh exception objects: one instance must not be raised in two threads.
+        self._error = [exc.message, exc.status] if isinstance(exc, WidgetError) else None
+        self._done.set()
+
+    def wait(self, timeout: float) -> FetchResult:
+        if not self._done.wait(timeout):
+            raise WidgetUnavailable()
+        if self._result is None:
+            raise _rebuild_error(self._error)
+        return FetchResult(self._result.data, self._result.fetched_at, cached=True)
+
+
+_flights: dict[str, _Flight] = {}
+_flights_lock = threading.Lock()
+
+
+def _from_cache(cache: Any, key: str, max_age: int) -> FetchResult | None:
     entry = cache.get(key)
+    if entry is None or time.time() - entry["fetched_at"] >= max_age:
+        return None
+    if "error" in entry:
+        raise _rebuild_error(entry["error"])
+    return FetchResult(entry["data"], entry["fetched_at"], cached=True)
+
+
+def _fetch_and_store(
+    cache: Any, key: str, widget: Widget, params: dict[str, Any], context: Any, max_age: int
+) -> FetchResult:
     now = time.time()
-    if entry is not None and now - entry["fetched_at"] < max_age:
-        if "error" in entry:
-            raise _rebuild_error(entry["error"])
-        return FetchResult(entry["data"], entry["fetched_at"], cached=True)
     label = f"{widget.service.name}.{widget.name}"
     try:
         data = run_with_timeout(widget, params, context, float(conf.get("FETCH_TIMEOUT")))
@@ -124,9 +187,8 @@ def run_with_timeout(widget: Widget, params: dict[str, Any], context: Any, timeo
             widget.name,
         )
         raise WidgetUnavailable()
-    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="widget_hub_fetch")
     try:
-        future = executor.submit(_call_in_worker, widget, params, context)
+        future = _executor().submit(_call_in_worker, widget, params, context)
     except BaseException:
         _release_slot()
         raise
@@ -136,8 +198,29 @@ def run_with_timeout(widget: Widget, params: dict[str, Any], context: Any, timeo
         raise FetchTimeout(
             f"{widget.service.name}.{widget.name} fetch() exceeded {timeout:g}s."
         ) from None
-    finally:
-        executor.shutdown(wait=False)
+
+
+_pool: ThreadPoolExecutor | None = None
+_pool_size = 0
+_pool_lock = threading.Lock()
+
+
+def _executor() -> ThreadPoolExecutor:
+    """The shared worker pool, as large as ``MAX_CONCURRENT_FETCHES``.
+
+    Slots are taken before submitting, so the pool never queues work behind abandoned calls.
+    If the setting grows, a larger pool replaces it (running calls finish in the old one).
+    """
+    global _pool, _pool_size
+    size = conf.get("MAX_CONCURRENT_FETCHES")
+    with _pool_lock:
+        if _pool is None or size > _pool_size:
+            old = _pool
+            _pool = ThreadPoolExecutor(max_workers=size, thread_name_prefix="widget_hub_fetch")
+            _pool_size = size
+            if old is not None:
+                old.shutdown(wait=False)
+        return _pool
 
 
 _in_flight = 0

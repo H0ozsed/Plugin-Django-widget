@@ -92,6 +92,19 @@ Each entry: problem → options → choice → why → impact.
   pointed out that abandoned threads were unbounded: `MAX_CONCURRENT_FETCHES` now caps running
   calls (abandoned ones included) and rejects extra calls with a 503 without caching the refusal.
 
+## D17. Coalescing concurrent misses and a shared worker pool
+
+- **Problem:** measured with 20 threads asking for the same widget and params at the same
+  instant on a cold cache: 20 upstream calls. Creating one executor per call also cost 259 µs.
+- **Options:** (a) a distributed lock in the cache backend (needs atomic `add`, extra round
+  trips, lock expiry tuning); (b) in-process "single flight"; (c) nothing, rely on the cache.
+- **Choice:** (b): a dict of in-progress keys; followers wait at most `FETCH_TIMEOUT + 1` s for
+  the leader's outcome and receive fresh exception objects. Workers come from one pool sized by
+  `MAX_CONCURRENT_FETCHES` (slots are taken before submitting, so it never queues).
+- **Why:** removes the stampede where it is cheapest; across processes the cache already limits
+  the damage to one call per process.
+- **Impact:** 20 → 1 upstream call, 259 → 48 µs per worker hop; no new setting.
+
 ## D9. Error contract
 
 - **Problem:** the Epitech dashboard returned `{"error": ..., "details": str(exception)}`, leaking

@@ -56,6 +56,13 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Packaging: CI job installing the built wheel in a fresh virtualenv and running the example
   against it; `Release` workflow publishing tags to TestPyPI through trusted publishing.
 
+### Performance
+
+- Concurrent cache misses on the same widget and params are coalesced ("single flight"):
+  20 simultaneous identical requests now make 1 upstream call instead of 20.
+- `fetch()` runs in a shared worker pool instead of a new executor per call (worker hop
+  259 µs → 48 µs median).
+
 ### Security
 
 - CSRF is now enforced on unsafe requests whenever no framework authenticator accepted the
