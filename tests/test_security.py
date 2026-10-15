@@ -1,6 +1,7 @@
 import ipaddress
 import json
 import socket
+import ssl
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -301,6 +302,9 @@ def test_https_connects_to_the_validated_address_with_sni(monkeypatch):
     calls = {}
 
     class FakeContext:
+        verify_mode = ssl.CERT_REQUIRED  # read by HTTPSConnection.__init__ on Python < 3.12
+        check_hostname = True
+
         def wrap_socket(self, sock, server_hostname):
             calls["sni"] = server_hostname
             raise OSError("stop here")
