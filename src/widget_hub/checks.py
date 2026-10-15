@@ -39,6 +39,14 @@ def check_settings(app_configs: Any = None, **kwargs: Any) -> list[Error]:
         errors.append(
             Error("WIDGET_HUB FETCH_TIMEOUT must be a positive number.", id="widget_hub.E003")
         )
+    cap = conf.get("MAX_CONCURRENT_FETCHES")
+    if isinstance(cap, bool) or not isinstance(cap, int) or cap <= 0:
+        errors.append(
+            Error(
+                "WIDGET_HUB MAX_CONCURRENT_FETCHES must be a positive integer.",
+                id="widget_hub.E005",
+            )
+        )
     if conf.get("CACHE_ALIAS") not in settings.CACHES:
         errors.append(
             Error(

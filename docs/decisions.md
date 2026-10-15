@@ -84,4 +84,18 @@ Each entry: problem → options → choice → why → impact.
 - **Why:** works under any WSGI/ASGI server and OS. Threads cannot be killed, so an abandoned call
   finishes in the background; `safe_fetch()` sets socket timeouts so it always ends. Worker threads
   close their own DB connections.
-- **Impact:** one short-lived thread per cache miss; documented in Limitations.
+- **Impact:** one short-lived thread per cache miss; documented in Limitations. A security review
+  pointed out that abandoned threads were unbounded: `MAX_CONCURRENT_FETCHES` now caps running
+  calls (abandoned ones included) and rejects extra calls with a 503 without caching the refusal.
+
+## D9. Error contract
+
+- **Problem:** the Epitech dashboard returned `{"error": ..., "details": str(exception)}`, leaking
+  internal URLs and library messages, and every route had its own shape.
+- **Options:** (a) let exceptions reach Django's 500 handler; (b) a single exception the widget
+  author raises for user-facing errors, everything else generic.
+- **Choice:** (b). `WidgetError(message, status)` is the only way to send text to the user;
+  anything else is logged with its traceback and answered with a fixed 503 message.
+- **Why:** widget authors decide what is safe to show; mistakes default to silence.
+- **Impact:** one JSON shape `{"error": {"code", "message", "details"?}}` for every adapter.
+  Failures are cached for the refresh period so a failing upstream is not retried in a loop.

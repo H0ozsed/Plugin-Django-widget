@@ -5,9 +5,9 @@ import pytest
 from django.core.checks.registry import registry
 from django.test import override_settings
 
-from widget_hub import Service, Widget, params, services
+from widget_hub import Service, Widget, fetching, params, services
 from widget_hub.checks import check_settings
-from widget_hub.exceptions import InvalidInput
+from widget_hub.exceptions import InvalidInput, WidgetUnavailable
 from widget_hub.fetching import FetchTimeout, cache_key, cached_fetch, run_with_timeout
 
 counter = Service("counter")
@@ -101,21 +101,6 @@ def test_cache_alias_is_configurable():
     assert widget.calls == 2  # the dummy backend never stores anything
 
 
-def test_non_json_result_is_not_cached():
-    class Bad(Counting):
-        name = "bad"
-
-        def fetch(self, params, context):
-            super().fetch(params, context)
-            return {"when": object()}
-
-    widget = Bad()
-    for _ in range(2):
-        with pytest.raises(TypeError):
-            cached_fetch(widget, {"q": "a"}, None, max_age=60)
-    assert widget.calls == 2
-
-
 def test_timeout():
     widget = Slow()
     started = time.monotonic()
@@ -139,9 +124,23 @@ def test_fetch_exceptions_propagate():
 @override_settings(WIDGET_HUB={"FETCH_TIMEOUT": 0.05})
 def test_cached_fetch_uses_timeout_setting():
     widget = Slow()
-    with pytest.raises(FetchTimeout):
+    with pytest.raises(WidgetUnavailable):
         cached_fetch(widget, {}, None, max_age=60)
     widget.release.set()
+
+
+@override_settings(WIDGET_HUB={"MAX_CONCURRENT_FETCHES": 1, "FETCH_TIMEOUT": 0.05})
+def test_abandoned_fetches_count_against_the_concurrency_cap():
+    slow = Slow()
+    with pytest.raises(FetchTimeout):
+        run_with_timeout(slow, {}, None, 0.05)  # times out, thread keeps running
+    with pytest.raises(WidgetUnavailable):
+        run_with_timeout(Counting(), {"q": "a"}, None, 1)  # no slot left
+    slow.release.set()
+    deadline = time.monotonic() + 2
+    while fetching.in_flight() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert run_with_timeout(Counting(), {"q": "a"}, None, 1) == {"q": "a", "call": 1}
 
 
 @pytest.mark.django_db

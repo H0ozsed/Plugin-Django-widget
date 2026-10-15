@@ -22,3 +22,7 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `WIDGET_HUB` settings dict with system checks; `fetch()` results cached per
   (widget, normalised params) through Django's cache framework, `Widget.cache_per_owner`,
   `MIN_REFRESH_RATE`/`MAX_REFRESH_RATE` enforcement and a per-call `FETCH_TIMEOUT`.
+- Error contract: `WidgetError(message, status)`, generic 503 for crashes/timeouts with details
+  only in logs, cached failures, one JSON error shape (`widget_hub.errors`).
+- `MAX_CONCURRENT_FETCHES` caps running `fetch()` calls, timed-out ones included, so a slow
+  upstream cannot make the process accumulate threads.

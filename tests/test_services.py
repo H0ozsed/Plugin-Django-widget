@@ -1,7 +1,7 @@
 import pytest
 
 from widget_hub import services
-from widget_hub.exceptions import InvalidInput, NotFound, ParamValidationError
+from widget_hub.exceptions import InvalidInput, NotFound
 from widget_hub.models import WidgetInstance
 
 pytestmark = pytest.mark.django_db
@@ -126,7 +126,7 @@ def test_fetch_passes_validated_params_and_context(alice):
 def test_fetch_revalidates_stored_params(alice):
     instance = create(alice)
     WidgetInstance.objects.filter(pk=instance.pk).update(params={"text": "x" * 99})
-    with pytest.raises(ParamValidationError):
+    with pytest.raises(InvalidInput):
         services.fetch_instance_data(alice, instance.pk)
 
 

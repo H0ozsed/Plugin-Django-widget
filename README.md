@@ -72,6 +72,7 @@ WIDGET_HUB = {
     "MIN_REFRESH_RATE": 30,  # seconds; lower refresh rates are rejected
     "MAX_REFRESH_RATE": 86400,  # seconds; higher refresh rates are rejected
     "FETCH_TIMEOUT": 10.0,  # seconds a single fetch() may run
+    "MAX_CONCURRENT_FETCHES": 32,  # running fetch() calls per process, timed-out ones included
 }
 ```
 
@@ -84,7 +85,33 @@ upstream call per refresh period. Set `cache_per_owner = True` on a widget whose
 the user. An entry is reused while it is younger than the instance's `refresh_rate`, and refresh
 rates must stay within `MIN_REFRESH_RATE`–`MAX_REFRESH_RATE`: calling the data endpoint in a loop
 never reaches the external API more than once per period. Each `fetch()` runs in a worker thread
-and is abandoned after `FETCH_TIMEOUT` seconds.
+and is abandoned after `FETCH_TIMEOUT` seconds; at most `MAX_CONCURRENT_FETCHES` calls run at
+once (abandoned ones count until they return), beyond that requests get a 503 immediately.
+
+## Error contract
+
+Inside `fetch()`, raise `WidgetError(message, status=502)` for expected failures: the message is
+shown to the user as-is. Any other exception, a timeout or a non-JSON result becomes a 503 with a
+generic message; the traceback goes to the `widget_hub` logger only. Failures are cached like
+successes, so a broken upstream is retried once per refresh period, not on every request.
+
+Every error response uses one shape:
+
+```json
+{"error": {"code": "invalid_input", "message": "Invalid input.",
+           "details": {"params": {"days": "Must be less than or equal to 16."}}}}
+```
+
+| code | status | when |
+|---|---|---|
+| `invalid_input` | 400 | payload failed validation; `details` maps field → message |
+| `not_authenticated` | 401 | no authenticated user |
+| `permission_denied` | 403 | the permission check refused access |
+| `not_found` | 404 | unknown widget, or instance missing or owned by someone else |
+| `widget_error` | from `WidgetError` | `fetch()` raised `WidgetError` |
+| `unavailable` | 503 | `fetch()` crashed, timed out, or the concurrency cap was reached |
+
+`details` only appears for `invalid_input`.
 
 ## Development
 

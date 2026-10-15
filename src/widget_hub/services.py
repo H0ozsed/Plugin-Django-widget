@@ -9,6 +9,7 @@ exactly like a missing one, so ids of other users' instances cannot be probed.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from django.contrib.auth.models import AbstractBaseUser
@@ -51,6 +52,15 @@ def serialize_instance(instance: WidgetInstance) -> dict[str, Any]:
         "position": instance.position,
         "created_at": instance.created_at.isoformat(),
         "updated_at": instance.updated_at.isoformat(),
+    }
+
+
+def serialize_result(result: FetchResult) -> dict[str, Any]:
+    """Return the public JSON representation of fetched data."""
+    return {
+        "data": result.data,
+        "fetched_at": datetime.fromtimestamp(result.fetched_at, tz=timezone.utc).isoformat(),
+        "cached": result.cached,
     }
 
 
@@ -148,12 +158,19 @@ def fetch_instance_data(owner: AbstractBaseUser, instance_id: Any) -> FetchResul
 
     The cache entry may be at most ``instance.refresh_rate`` seconds old (never less than
     ``MIN_REFRESH_RATE``), so calling this in a loop never reaches the upstream API more than
-    once per refresh period. ``fetch()`` is interrupted after ``FETCH_TIMEOUT`` seconds
-    (:class:`~widget_hub.fetching.FetchTimeout`).
+    once per refresh period.
+
+    :raises NotFound: unknown instance or widget.
+    :raises InvalidInput: the stored params no longer match the widget's declaration.
+    :raises WidgetError: raised by ``fetch()``, message meant for the user.
+    :raises WidgetUnavailable: ``fetch()`` crashed, timed out or returned non-JSON data.
     """
     instance = get_instance(owner, instance_id)
     widget_obj = get_widget(instance.service, instance.widget)
-    params = widget_obj.validate(instance.params)
+    try:
+        params = widget_obj.validate(instance.params)
+    except ParamValidationError as exc:
+        raise InvalidInput({"params": exc.errors}) from None
     return cached_fetch(
         widget_obj,
         params,

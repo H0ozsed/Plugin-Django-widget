@@ -21,6 +21,8 @@ DEFAULTS: dict[str, Any] = {
     "MAX_REFRESH_RATE": 86400,
     # Wall-clock limit (seconds) for one fetch() call.
     "FETCH_TIMEOUT": 10.0,
+    # Process-wide cap on running fetch() calls (timed-out ones count until they return).
+    "MAX_CONCURRENT_FETCHES": 32,
 }
 """Documented defaults; the README settings table mirrors this dict."""
 
