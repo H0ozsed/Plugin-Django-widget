@@ -127,3 +127,8 @@ Each entry: problem → options → choice → why → impact.
   credentials or enforce CSRF themselves. The first version keyed the check on where the default
   resolver found the user and skipped it entirely under DRF; a security review showed that a
   custom `OWNER_RESOLVER` reading the session bypassed it, hence the rule above (fail closed).
+  A second review showed that "an authenticator accepted the request" is not enough either: the
+  common ninja authenticator `lambda request: request.user` relies on the session cookie without
+  checking CSRF. Final rule: the check is skipped only when an authenticator accepted the request
+  **and** Django's session cookie is absent. A browser client holding both a session and a token
+  must send the CSRF token; other cookie-based authenticators must check CSRF themselves.

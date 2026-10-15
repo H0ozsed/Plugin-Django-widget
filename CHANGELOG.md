@@ -39,3 +39,6 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CSRF is now enforced on unsafe requests whenever no framework authenticator accepted the
   request (previously the DRF adapter skipped the check entirely, so a custom `OWNER_RESOLVER`
   reading Django's session could be driven cross-site).
+- CSRF is also enforced when a framework authenticator accepted the request but the browser sent
+  Django's session cookie: ninja authenticators that simply return `request.user` no longer
+  bypass it. Only requests without the session cookie (token clients) skip the check.

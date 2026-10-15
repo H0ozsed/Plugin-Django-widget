@@ -249,6 +249,22 @@ def test_csrf_enforced_when_owner_does_not_come_from_an_authenticator(alice, nam
         assert body["error"]["message"] == "CSRF verification failed."
 
 
+def test_csrf_enforced_when_an_authenticator_trusts_the_session_cookie(alice):
+    """Regression: ninja authenticators returning request.user must not bypass CSRF."""
+    api = Api("/ninja/cookie/widgets", "session", enforce_csrf=True).login(alice)
+    assert create(api)[0] == 403
+    api.client.get("/admin/login/")
+    api.headers = {"HTTP_X_CSRFTOKEN": api.client.cookies["csrftoken"].value}
+    assert create(api)[0] == 201
+
+
+@pytest.mark.parametrize("name", TOKEN_ADAPTERS)
+def test_token_with_session_cookie_still_needs_csrf(alice, name):
+    api = Api(*ADAPTERS[name], enforce_csrf=True).login(alice)
+    api.client.force_login(alice)  # the browser also holds a session cookie
+    assert create(api)[0] == 403
+
+
 @pytest.mark.parametrize("name", TOKEN_ADAPTERS)
 def test_token_auth_is_not_subject_to_csrf(alice, name):
     api = Api(*ADAPTERS[name], enforce_csrf=True).login(alice)

@@ -23,10 +23,20 @@ ninja_session_api.add_router("/widgets", build_router())
 ninja_token_api = NinjaAPI(urls_namespace="ninja_token", auth=BearerUsername())
 ninja_token_api.add_router("/widgets", build_router())
 
+
+def session_user(request):
+    """A common ninja authenticator that trusts the session cookie without checking CSRF."""
+    return request.user if request.user.is_authenticated else None
+
+
+ninja_cookie_api = NinjaAPI(urls_namespace="ninja_cookie", auth=session_user)
+ninja_cookie_api.add_router("/widgets", build_router())
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("ninja/session/", ninja_session_api.urls),
     path("ninja/token/", ninja_token_api.urls),
+    path("ninja/cookie/", ninja_cookie_api.urls),
     path("drf/widgets/", include(drf.build_router().urls)),
     path("", include("widget_hub.urls")),
 ]
