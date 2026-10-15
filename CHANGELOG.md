@@ -50,6 +50,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `POSITION_VALIDATOR` setting: position validation is swappable for fronts that do not use the
   built-in grid (found while migrating the Epitech dashboard, whose React front stores pixels).
 - Documentation: full README, CONTRIBUTING, research notes, design decisions.
+- Integration proof (`integration/epitech/`, `docs/migration-epitech.md`): the Epitech dashboard's
+  widget layer migrated to the plugin with an identical `/about.json`, a tested data migration and
+  reproducible line counts.
 - Packaging: CI job installing the built wheel in a fresh virtualenv and running the example
   against it; `Release` workflow publishing tags to TestPyPI through trusted publishing.
 

@@ -30,6 +30,17 @@ jobs:
       - run: node --check src/widget_hub/static/widget_hub/dashboard.js
       - run: node --test "tests/js/*.test.js"
 
+  integration:
+    # The Epitech dashboard migration: /about.json identical, data migration, line counts.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev]" feedparser
+      - run: pytest integration/epitech --ds=epitech_after.settings -p no:cacheprovider
+
   package:
     # Build the sdist/wheel and run the example project against the *installed* wheel.
     runs-on: ubuntu-latest

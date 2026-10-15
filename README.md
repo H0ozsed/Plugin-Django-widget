@@ -440,8 +440,23 @@ Every non-obvious choice is written up as problem → options → choice → why
 
 ## Real-world proof
 
-The Epitech dashboard migration is documented in step 15 of [PROGRESS.md](PROGRESS.md); this
-section is completed with its results.
+The Epitech dashboard's widget layer (6 services, 8 widgets, commit `e56b817`) was migrated to
+the plugin in [`integration/epitech/`](integration/epitech): the hand-written registry, the
+widget routes and the `WidgetInstance`/`ServiceCredential` models were replaced, existing rows are
+moved by a tested data migration, and **`/about.json` is byte-for-byte identical** to the one
+captured from the original backend running, directly and behind the proxy.
+
+| | Before | After |
+|---|---|---|
+| Files touched to add one widget | 4 (registry, route, front config, component) | 1 (`widgets.py`) |
+| Widget-related lines of code | 495 | 253 (−49 %) |
+| Duplicate names, registry/route mismatch, widget without backend | possible, each happened | impossible (startup error or same declaration) |
+| Param bounds | re-coded per route, stored params never checked | declared once, checked on save and before `fetch()` |
+| Errors / SSRF / token key | `str(exception)` sent; host resolved twice; `sha256(SECRET_KEY)` | one contract; pinned `safe_fetch`; HKDF key with rotation |
+
+The migration also improved the plugin: the React front stores pixel positions, which led to the
+`POSITION_VALIDATOR` setting. Full write-up, method and limits (the React front itself was not
+migrated): [docs/migration-epitech.md](docs/migration-epitech.md).
 
 ## Limitations and roadmap
 

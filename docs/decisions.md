@@ -10,8 +10,12 @@ Each entry: problem → options → choice → why → impact.
   repository, reading the Epitech code only.
 - **Choice:** (b), on the maintainer's instruction ("I made a repo for this project, do it here").
 - **Why:** keeps the school repository untouched; the proof stays reviewable next to the plugin.
-- **Impact:** the "before" code is copied verbatim under `integration/epitech/` with its origin
-  commit noted; the "after" version uses the plugin, and `/about.json` is compared in tests.
+- **Impact:** the original widget-related files are copied verbatim under
+  `integration/epitech/before/` (origin commit `e56b817`, excluded from formatting, no settings or
+  secrets copied); `integration/epitech/after/` is the migrated backend. `/about.json` was captured
+  from the original backend actually running (its own dependencies, SQLite instead of PostgreSQL)
+  and the migrated project's output is compared to it in CI. The Epitech repository was only
+  read, never modified or pushed to.
 
 ## D2. Build backend and single version source
 

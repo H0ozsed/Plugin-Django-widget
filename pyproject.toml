@@ -60,14 +60,19 @@ include = ["src/widget_hub", "tests", "LICENSE", "README.md", "CHANGELOG.md"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
-pythonpath = [".", "src", "example"]
+pythonpath = [".", "src", "example", "integration/epitech", "integration/epitech/after"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["**/migrations/*.py"]
+force-exclude = true
+extend-exclude = [
+    "**/migrations/*.py",
+    # verbatim copies of the original Epitech code, kept unmodified for the comparison
+    "integration/epitech/before",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "DJ", "S", "SIM", "RUF"]
@@ -77,6 +82,7 @@ ignore = ["RUF012"]
 "tests/**" = ["S101", "S104", "S105", "S106"]
 "example/**" = ["S105"]
 "example/**/tests/**" = ["S101"]
+"integration/**/tests/**" = ["S101"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["widget_hub"]

@@ -3,7 +3,7 @@
 Live checklist for `django-widget-hub` (import `widget_hub`, setting `WIDGET_HUB`).
 After a session restart, read this first and resume from the first unchecked step.
 
-**Current step:** 15 — Integration proof (Epitech dashboard)
+**Current step:** all 15 steps done — waiting for the first release (see open questions).
 
 ## Plan (one feature = one commit = one push)
 
@@ -21,12 +21,14 @@ After a session restart, read this first and resume from the first unchecked ste
 - [x] 12. Built-in front: `{% dashboard %}`, JS grid/drag/resize/settings/refresh, CSS light/dark
 - [x] 13. Example project with 3 widgets (public API, user URL via `safe_fetch`, stored credential)
 - [x] 14. Documentation and packaging (README, docs, CHANGELOG, CONTRIBUTING, build + install in fresh venv, TestPyPI release workflow)
-- [ ] 15. Integration proof against the Epitech dashboard + `docs/migration-epitech.md`
+- [x] 15. Integration proof against the Epitech dashboard + `docs/migration-epitech.md`
 
 ## Open questions
 
-- None blocking. Step 15 is carried out inside this repository (see `docs/decisions.md`, D1).
+- Step 15 was carried out inside this repository on the maintainer's instruction (decision D1);
+  the Epitech repository was only read.
+- First release `v0.1.0`: the TestPyPI trusted publisher must be configured by the maintainer
+  before the tag is pushed (project `django-widget-hub`, owner `H0ozsed`, repository
+  `Plugin-Django-widget`, workflow `release.yml`, environment `testpypi`). Then: bump
+  `__version__` to `0.1.0`, date the CHANGELOG section, tag `v0.1.0`.
 - Publishing to the real PyPI waits for explicit confirmation.
-- TestPyPI trusted publisher must be configured by the maintainer before the first tag
-  (project `django-widget-hub`, repository `H0ozsed/Plugin-Django-widget`, workflow
-  `release.yml`, environment `testpypi`).

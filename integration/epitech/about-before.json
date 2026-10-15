@@ -1,0 +1,266 @@
+{
+  "direct": {
+    "client": {
+      "host": "203.0.113.7"
+    },
+    "server": {
+      "current_time": 1760000000,
+      "services": [
+        {
+          "name": "weather",
+          "widgets": [
+            {
+              "name": "city_temperature",
+              "description": "Display temperature and sky overview for a city",
+              "params": [
+                {
+                  "name": "city",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "city_forecast",
+              "description": "Display the daily forecast for a city over the next days",
+              "params": [
+                {
+                  "name": "city",
+                  "type": "string"
+                },
+                {
+                  "name": "days",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "nasa_picture",
+          "widgets": [
+            {
+              "name": "daily_picture",
+              "description": "Display NASA's astronomy picture from a given number of days ago",
+              "params": [
+                {
+                  "name": "days_ago",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "steam",
+          "widgets": [
+            {
+              "name": "global_achievements",
+              "description": "Display global achievement percentages for a Steam game",
+              "params": [
+                {
+                  "name": "game_id",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "github",
+          "widgets": [
+            {
+              "name": "user_profile",
+              "description": "Display a GitHub user's profile and latest repositories",
+              "params": [
+                {
+                  "name": "username",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "recent_commits",
+              "description": "Display the latest commit messages and authors of a GitHub repository",
+              "params": [
+                {
+                  "name": "owner",
+                  "type": "string"
+                },
+                {
+                  "name": "repo",
+                  "type": "string"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "rss",
+          "widgets": [
+            {
+              "name": "article_list",
+              "description": "Display the latest articles of an RSS feed",
+              "params": [
+                {
+                  "name": "link",
+                  "type": "string"
+                },
+                {
+                  "name": "number",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "time",
+          "widgets": [
+            {
+              "name": "clock",
+              "description": "Display the current time in a given timezone",
+              "params": [
+                {
+                  "name": "timezone",
+                  "type": "string"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "behind_proxy": {
+    "client": {
+      "host": "198.51.100.9"
+    },
+    "server": {
+      "current_time": 1760000000,
+      "services": [
+        {
+          "name": "weather",
+          "widgets": [
+            {
+              "name": "city_temperature",
+              "description": "Display temperature and sky overview for a city",
+              "params": [
+                {
+                  "name": "city",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "city_forecast",
+              "description": "Display the daily forecast for a city over the next days",
+              "params": [
+                {
+                  "name": "city",
+                  "type": "string"
+                },
+                {
+                  "name": "days",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "nasa_picture",
+          "widgets": [
+            {
+              "name": "daily_picture",
+              "description": "Display NASA's astronomy picture from a given number of days ago",
+              "params": [
+                {
+                  "name": "days_ago",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "steam",
+          "widgets": [
+            {
+              "name": "global_achievements",
+              "description": "Display global achievement percentages for a Steam game",
+              "params": [
+                {
+                  "name": "game_id",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "github",
+          "widgets": [
+            {
+              "name": "user_profile",
+              "description": "Display a GitHub user's profile and latest repositories",
+              "params": [
+                {
+                  "name": "username",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "recent_commits",
+              "description": "Display the latest commit messages and authors of a GitHub repository",
+              "params": [
+                {
+                  "name": "owner",
+                  "type": "string"
+                },
+                {
+                  "name": "repo",
+                  "type": "string"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "rss",
+          "widgets": [
+            {
+              "name": "article_list",
+              "description": "Display the latest articles of an RSS feed",
+              "params": [
+                {
+                  "name": "link",
+                  "type": "string"
+                },
+                {
+                  "name": "number",
+                  "type": "integer"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "time",
+          "widgets": [
+            {
+              "name": "clock",
+              "description": "Display the current time in a given timezone",
+              "params": [
+                {
+                  "name": "timezone",
+                  "type": "string"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
