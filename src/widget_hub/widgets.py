@@ -109,6 +109,7 @@ class Widget:
             "name": cls.name,
             "description": cls.description,
             "default_refresh_rate": cls.default_refresh_rate,
+            "uses_credential": cls.uses_credential,
             "params": [p.to_schema() for p in cls.params],
         }
 

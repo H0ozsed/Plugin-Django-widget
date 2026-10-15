@@ -20,6 +20,16 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
 
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --check src/widget_hub/static/widget_hub/dashboard.js
+      - run: node --test "tests/js/*.test.js"
+
   test:
     name: py${{ matrix.python }} / Django ${{ matrix.django }}
     runs-on: ubuntu-latest

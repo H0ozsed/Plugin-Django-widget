@@ -1,0 +1,24 @@
+{% load static %}<link rel="stylesheet" href="{% static 'widget_hub/dashboard.css' %}">
+<section class="wh-dashboard" aria-label="{{ title }}"{% if authenticated %}
+  data-wh-catalog="{{ urls.catalog }}"
+  data-wh-instances="{{ urls.instances }}"
+  data-wh-credentials="{{ urls.credentials }}"
+  data-wh-csrf-header="{{ csrf_header }}"
+  data-wh-min-refresh="{{ min_refresh }}"
+  data-wh-max-refresh="{{ max_refresh }}"{% endif %}>
+  <header class="wh-toolbar">
+    <h2 class="wh-title">{{ title }}</h2>
+    {% if authenticated %}<button type="button" class="wh-button wh-button-primary" data-wh-add>Add widget</button>{% endif %}
+  </header>
+  {% if authenticated %}
+    {% csrf_token %}
+    <p class="wh-sr-only" aria-live="polite" data-wh-live></p>
+    <p class="wh-help" id="wh-move-help">Focus a widget's move handle, then use the arrow keys to move it and Shift + arrow keys to resize it.</p>
+    <div class="wh-grid" role="list" data-wh-grid></div>
+    <p class="wh-empty" data-wh-empty hidden>No widget yet. Use “Add widget” to create one.</p>
+    <noscript><p class="wh-empty">The dashboard needs JavaScript.</p></noscript>
+  {% else %}
+    <p class="wh-empty">Log in to see your dashboard.</p>
+  {% endif %}
+</section>
+{% if authenticated %}<script src="{% static 'widget_hub/dashboard.js' %}" defer></script>{% endif %}

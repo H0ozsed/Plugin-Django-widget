@@ -173,6 +173,43 @@ Same routes and responses as the ninja adapter (`catalog`, `instances`, `instanc
 your `DEFAULT_AUTHENTICATION_CLASSES`; DRF's `SessionAuthentication` enforces CSRF for session
 users and answers CSRF failures with its own `{"detail": ...}` body. Bodies must be JSON.
 
+## The built-in front
+
+```python
+# urls.py
+path("", include("widget_hub.urls"))  # /about.json + /widget-hub/api/... (session auth)
+```
+
+```django
+{% load widget_hub %}
+{% dashboard title="My dashboard" %}
+```
+
+The tag renders the logged-in user's dashboard (anonymous users get a short message): a
+12-column grid, drag to move (⠿ handle) or resize (bottom-right corner), and the keyboard
+equivalent (focus the handle, arrow keys move, Shift + arrow keys resize, announced to screen
+readers). "Add widget" and ⚙ open a form generated from the widget's param schema, with server
+validation errors shown next to each field and a password field for widgets that use a
+credential. Each widget refreshes at its own rate; timers pause while the tab is hidden and catch
+up when it is visible again. A failing widget shows its error inside its own frame, keeps its last
+data and retries at the next refresh; the rest of the dashboard is untouched. Moves that would
+overlap another widget are refused; new widgets take the first free slot.
+
+Data is rendered generically (objects as definition lists, arrays as lists, http(s) URLs as links
+or images, everything through `textContent`). Register your own renderer per widget:
+
+```html
+<script>
+  WidgetHub.registerRenderer("weather.city_forecast", (element, data) => {
+    element.textContent = `${data.temperature} °C`;
+  });
+</script>
+```
+
+No secret is written in the page: only API URLs, refresh limits and Django's CSRF token field.
+Light and dark themes follow `prefers-color-scheme`; force one with `data-theme="light|dark"` on
+`.wh-dashboard`, or override the `--wh-*` CSS custom properties. No build step, no dependency.
+
 ## Security
 
 **Owner scoping.** Every instance and credential operation takes the owner explicitly; another

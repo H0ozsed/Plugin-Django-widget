@@ -139,6 +139,20 @@ Each entry: problem → options → choice → why → impact.
 - **Impact:** a secret never crosses users through the cache, and losing the key only makes
   secrets unreadable (`None`), users then store them again.
 
+## D14. Built-in front without a build step
+
+- **Problem:** the front must work in any Django project without React or a bundler.
+- **Options:** (a) a React/Vue bundle; (b) htmx + server-rendered fragments; (c) one vanilla JS
+  file using `fetch`, `<dialog>` and CSS grid.
+- **Choice:** (c), ~600 lines, ES5-style syntax that every current browser runs as is.
+- **Why:** zero dependency, works with `collectstatic` only, and the JSON API it uses is the same
+  contract as the ninja/DRF adapters. Pure helpers (layout, schema → form) are unit-tested with
+  `node --test`; the whole flow was checked in headless Chrome during development.
+- **Details:** the front's API views are `csrf_exempt` only to answer CSRF failures in the JSON
+  error contract; `widget_hub.api.handle` runs Django's CSRF check on every unsafe request. Server
+  data is inserted with `textContent` and only `http(s)` URLs become links or images. Overlapping
+  placements are refused rather than pushing other widgets around, which keeps the logic small.
+
 ## D10. `/about.json` client host and param types
 
 - **Problem:** the Epitech code trusted `X-Forwarded-For` unconditionally (spoofable when no proxy

@@ -138,6 +138,7 @@ def test_widget_schema():
         "name": "forecast",
         "description": "Daily forecast",
         "default_refresh_rate": 300,
+        "uses_credential": False,
         "params": [
             {
                 "name": "city",

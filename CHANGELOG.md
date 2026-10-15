@@ -39,6 +39,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   HKDF-derived key from `CREDENTIALS_KEY` or `SECRET_KEY`), `Widget.uses_credential`,
   `FetchContext.credential`, `/credentials` endpoints in both adapters, warning `widget_hub.W001`.
 - New dependency: `cryptography`.
+- Built-in front: `{% load widget_hub %}{% dashboard %}` template tag, dependency-free
+  `dashboard.js` (grid, pointer and keyboard move/resize without overlaps, settings forms
+  generated from the param schema, per-widget errors with retry, refresh paused on hidden tabs,
+  `WidgetHub.registerRenderer`), `dashboard.css` with light/dark themes, and a session-authenticated
+  JSON API under `widget-hub/api/` in `widget_hub.urls`. `Widget.schema()` exposes
+  `uses_credential`.
 
 ### Security
 

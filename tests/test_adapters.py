@@ -15,8 +15,9 @@ ADAPTERS = {
     "ninja-token": ("/ninja/token/widgets", "token"),
     "drf-session": ("/drf/widgets", "session"),
     "drf-token": ("/drf/widgets", "token"),
+    "builtin-session": ("/widget-hub/api", "session"),
 }
-SESSION_ADAPTERS = ["ninja-session", "drf-session"]
+SESSION_ADAPTERS = ["ninja-session", "drf-session", "builtin-session"]
 TOKEN_ADAPTERS = ["ninja-token", "drf-token"]
 
 

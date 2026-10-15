@@ -1,0 +1,14 @@
+{% load widget_hub %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>widget_hub demo</title>
+  <link rel="icon" href="data:,">
+  <style>body { margin: 0; padding: 16px; font-family: system-ui, sans-serif; }</style>
+</head>
+<body>
+  <p>Signed in as {{ request.user.get_username }} · <a href="{% url 'admin:index' %}">admin</a></p>
+  {% dashboard title="My dashboard" %}
+</body>
+</html>
