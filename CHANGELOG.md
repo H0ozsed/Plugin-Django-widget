@@ -15,3 +15,5 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `<app>/widgets.py` modules are autodiscovered.
 - Parameter validation (`Widget.validate`, `ParamValidationError`) with per-field messages,
   defaults, bounds, choices, URL checks, unknown-key rejection; `Widget.schema()` for clients.
+- `WidgetInstance` model (owner via `AUTH_USER_MODEL`, service, widget, params, refresh rate,
+  position, timestamps), its initial migration and admin; `clean()` validates params.

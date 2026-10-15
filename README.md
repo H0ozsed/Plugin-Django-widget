@@ -44,6 +44,12 @@ offending parameter (or `"__all__"`) to one message, for example
 `{"days": "Must be less than or equal to 16.", "colour": "Unknown parameter."}`.
 `Widget.schema()` returns the JSON description used by the built-in front and API clients.
 
+## Storage
+
+Add `"widget_hub"` to `INSTALLED_APPS` and run `python manage.py migrate`. Each placed widget is a
+`widget_hub.models.WidgetInstance` row (owner, service, widget, params, refresh_rate, position,
+timestamps), editable in the Django admin where params are validated against the declaration.
+
 ## Development
 
 ```bash

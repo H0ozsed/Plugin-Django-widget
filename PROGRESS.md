@@ -3,14 +3,14 @@
 Live checklist for `django-widget-hub` (import `widget_hub`, setting `WIDGET_HUB`).
 After a session restart, read this first and resume from the first unchecked step.
 
-**Current step:** 4 — Models + migrations
+**Current step:** 5 — Framework-agnostic service layer
 
 ## Plan (one feature = one commit = one push)
 
 - [x] 1. Repo skeleton: pyproject (extras ninja/drf/dev), src layout, MIT, .gitignore, `example/`, pytest-django, PROGRESS.md, CI (Python/Django matrix + ruff)
 - [x] 2. Core declaration API: `Widget`, `Service`, typed params (String, Integer, Boolean, Choice, Url), `@register`, registry rejecting duplicates at startup
 - [x] 3. Param validation and serialisation (types, required, min/max, choices, defaults) with precise errors
-- [ ] 4. Models + migrations: `WidgetInstance`, admin registration
+- [x] 4. Models + migrations: `WidgetInstance`, admin registration
 - [ ] 5. Framework-agnostic service layer (owner-scoped CRUD, fetch data)
 - [ ] 6. Caching and rate limiting (Django cache, per-call timeout, minimum refresh rate)
 - [ ] 7. Error contract (`WidgetError(message, status)`, generic 503, documented JSON shape)
