@@ -19,11 +19,14 @@ Example::
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.core.exceptions import ImproperlyConfigured
 
 from .params import Param, check_name, validate_params
+
+if TYPE_CHECKING:
+    from .services import FetchContext
 
 
 class Service:
@@ -96,7 +99,7 @@ class Widget:
             "params": [p.to_schema() for p in cls.params],
         }
 
-    def fetch(self, params: dict[str, Any], context: Any) -> Any:
+    def fetch(self, params: dict[str, Any], context: FetchContext) -> Any:
         """Return JSON-serialisable data for one widget instance.
 
         :param params: validated parameter values (defaults applied).

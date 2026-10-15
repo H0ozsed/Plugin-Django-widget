@@ -50,6 +50,16 @@ Add `"widget_hub"` to `INSTALLED_APPS` and run `python manage.py migrate`. Each 
 `widget_hub.models.WidgetInstance` row (owner, service, widget, params, refresh_rate, position,
 timestamps), editable in the Django admin where params are validated against the declaration.
 
+## Service layer
+
+`widget_hub.services` holds the framework-agnostic operations every adapter uses:
+`list_instances(owner)`, `get_instance(owner, id)`, `create_instance(owner, service=, widget=,
+params=, refresh_rate=, position=)`, `update_instance(owner, id, **fields)`,
+`delete_instance(owner, id)`, `fetch_instance_data(owner, id)` and `serialize_instance(instance)`.
+They raise `InvalidInput(errors)` (400) or `NotFound` (404); another user's instance is a
+`NotFound`, never a 403. `fetch()` receives the validated params and a `FetchContext(owner,
+instance_id)`.
+
 ## Development
 
 ```bash

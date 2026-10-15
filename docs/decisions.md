@@ -50,3 +50,14 @@ Each entry: problem → options → choice → why → impact.
   `widgets.py` modules are imported in `AppConfig.ready()` so the error happens at startup, not on
   first request.
 - **Impact:** a misconfigured project does not start; tests can build isolated `WidgetRegistry()`.
+
+## D6. A service layer below the HTTP adapters
+
+- **Problem:** ninja, DRF and the built-in front must enforce the same owner scoping and
+  validation; duplicating it per adapter is how scoping bugs appear.
+- **Options:** (a) a base view class per framework; (b) plain functions taking `owner` explicitly.
+- **Choice:** (b) `widget_hub.services`.
+- **Why:** framework-free, trivially testable, and the owner cannot be forgotten because it is a
+  required positional argument. Others' instances raise `NotFound` (→ 404) so ids cannot be probed.
+- **Impact:** adapters are thin translations of exceptions to HTTP responses. Stored params are
+  re-validated before `fetch()`, so a widget whose declaration changed never receives stale input.

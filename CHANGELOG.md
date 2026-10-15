@@ -17,3 +17,5 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   defaults, bounds, choices, URL checks, unknown-key rejection; `Widget.schema()` for clients.
 - `WidgetInstance` model (owner via `AUTH_USER_MODEL`, service, widget, params, refresh rate,
   position, timestamps), its initial migration and admin; `clean()` validates params.
+- Framework-agnostic service layer (`widget_hub.services`): owner-scoped list/get/create/update/
+  delete, `fetch_instance_data`, `FetchContext`, `InvalidInput` and `NotFound` exceptions.
