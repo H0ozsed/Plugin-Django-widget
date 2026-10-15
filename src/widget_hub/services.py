@@ -8,14 +8,14 @@ exactly like a missing one, so ids of other users' instances cannot be probed.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
 from django.contrib.auth.models import AbstractBaseUser
 from django.db.models import QuerySet
 
-from . import conf
+from . import conf, credentials
 from .exceptions import InvalidInput, NotFound, ParamValidationError
 from .fetching import FetchResult, cached_fetch
 from .models import WidgetInstance
@@ -35,10 +35,13 @@ class FetchContext:
 
     :ivar owner: the user who owns the instance being refreshed.
     :ivar instance_id: primary key of that instance.
+    :ivar credential: the owner's decrypted secret for the widget's service when the widget sets
+        ``uses_credential``; ``None`` otherwise or when none is stored. Never log it.
     """
 
     owner: AbstractBaseUser
     instance_id: int
+    credential: str | None = field(default=None, repr=False)
 
 
 def serialize_instance(instance: WidgetInstance) -> dict[str, Any]:
@@ -142,8 +145,8 @@ def update_instance(
     cleaned = _clean_fields(widget_obj, errors, **supplied)
     if errors:
         raise InvalidInput(errors)
-    for field, value in cleaned.items():
-        setattr(instance, field, value)
+    for name, value in cleaned.items():
+        setattr(instance, name, value)
     instance.save(update_fields=[*cleaned, "updated_at"])
     return instance
 
@@ -171,10 +174,15 @@ def fetch_instance_data(owner: AbstractBaseUser, instance_id: Any) -> FetchResul
         params = widget_obj.validate(instance.params)
     except ParamValidationError as exc:
         raise InvalidInput({"params": exc.errors}) from None
+    # Loaded here, in the request thread, so fetch() never needs the ORM in its worker thread,
+    # and only for the widget's own service (least privilege).
+    secret = (
+        credentials.get_credential(owner, instance.service) if widget_obj.uses_credential else None
+    )
     return cached_fetch(
         widget_obj,
         params,
-        FetchContext(owner=owner, instance_id=instance.pk),
+        FetchContext(owner=owner, instance_id=instance.pk, credential=secret),
         max_age=max(instance.refresh_rate, conf.get("MIN_REFRESH_RATE")),
         owner_id=owner.pk,
     )

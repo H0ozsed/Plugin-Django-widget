@@ -76,6 +76,10 @@ WIDGET_HUB = {
     "ABOUT_TRUST_X_FORWARDED_FOR": False,  # /about.json client.host from X-Forwarded-For
     "OWNER_RESOLVER": "widget_hub.auth.default_owner",  # request -> user or None
     "PERMISSION_CHECK": None,  # (request, owner, action) -> bool; None allows everything
+    "CREDENTIALS_KEY": None,  # secret or [new, old, ...] for the credential store; None: SECRET_KEY
+    "SAFE_FETCH_TIMEOUT": 5.0,  # safe_fetch() overall deadline, seconds
+    "SAFE_FETCH_MAX_BYTES": 2097152,  # safe_fetch() largest accepted body
+    "SAFE_FETCH_MAX_REDIRECTS": 3,  # safe_fetch() redirects followed (each one re-validated)
 }
 ```
 
@@ -143,6 +147,9 @@ api.add_router("/widgets", build_router())
 | PATCH | `/widgets/instances/{id}` | update `params`, `refresh_rate`, `position` |
 | DELETE | `/widgets/instances/{id}` | 204 |
 | GET | `/widgets/instances/{id}/data` | `{"data": ..., "fetched_at": "...", "cached": bool}` |
+| GET | `/widgets/credentials` | services the user stored a secret for (never the secret) |
+| PUT | `/widgets/credentials/{service}` | store `{"secret": "..."}` encrypted → 204 |
+| DELETE | `/widgets/credentials/{service}` | 204 |
 
 Bodies are validated by widget_hub (not pydantic) so errors follow the contract above. When the
 API has no authenticator and the user comes from the session cookie, unsafe methods require a
@@ -166,6 +173,41 @@ Same routes and responses as the ninja adapter (`catalog`, `instances`, `instanc
 your `DEFAULT_AUTHENTICATION_CLASSES`; DRF's `SessionAuthentication` enforces CSRF for session
 users and answers CSRF failures with its own `{"detail": ...}` body. Bodies must be JSON.
 
+## Security
+
+**Owner scoping.** Every instance and credential operation takes the owner explicitly; another
+user's instance answers 404 exactly like a missing one.
+
+**CSRF.** Unsafe requests must pass Django's CSRF check unless an API authenticator accepted the
+request *and* no session cookie was sent (token clients).
+
+**SSRF: `safe_fetch()`.** Use it whenever a URL comes from a user:
+
+```python
+from widget_hub.security import safe_fetch
+
+response = safe_fetch(params["feed"], timeout=5, max_bytes=1_000_000)
+items = parse(response.text)  # .status, .headers, .content, .text, .json()
+```
+
+It accepts only `http`/`https` URLs without embedded credentials, resolves the host and refuses it
+if *any* address is private, loopback, link-local (cloud metadata), CGNAT, multicast or reserved
+(IPv4-mapped IPv6 included), then connects to the address it checked, with the original host name
+for `Host`, SNI and certificate validation, so DNS rebinding cannot swap the target. Redirects are
+followed by hand and re-validated; `Authorization` is dropped when the host changes. Each call has
+a deadline and a body size limit. Failures raise `SafeFetchError`, a `WidgetError` with a safe
+message (400 refused URL, 502 network error, 504 timeout), so it can simply propagate.
+
+**Credentials.** A widget that needs a user's API token sets `uses_credential = True` (which
+requires `cache_per_owner = True`, enforced at startup) and reads `context.credential`, the
+owner's secret for that widget's service only, or `None`. Users store it through
+`PUT /credentials/{service}`. Secrets are encrypted with Fernet using a key derived (HKDF-SHA256)
+from `CREDENTIALS_KEY`; without it, from `SECRET_KEY` with a `widget_hub.W001` warning, and
+`SECRET_KEY_FALLBACKS` still decrypts after a rotation. They never appear in responses, `repr()`,
+logs or the admin.
+
+**Errors.** Exception details never reach clients (see the error contract).
+
 ## The `/about.json` endpoint
 
 `path("", include("widget_hub.urls"))` publishes a public `GET /about.json` in the Epitech
@@ -186,6 +228,17 @@ Param types are mapped to that format's vocabulary: `Integer` → `integer`, `Bo
 `boolean`, everything else → `string`. `client.host` is `REMOTE_ADDR`; set
 `ABOUT_TRUST_X_FORWARDED_FOR` only behind a reverse proxy that overwrites `X-Forwarded-For`,
 otherwise clients could choose the value.
+
+## Dependencies
+
+| Package | Why |
+|---|---|
+| Django ≥ 5.2 | the framework this app plugs into |
+| cryptography ≥ 42 | Fernet + HKDF for the credential store; the standard library has no authenticated encryption |
+| django-ninja (extra `ninja`) | only for the ninja adapter |
+| djangorestframework (extra `drf`) | only for the DRF adapter |
+
+HTTP (`safe_fetch`), caching, threading and validation use the standard library and Django.
 
 ## Development
 

@@ -100,6 +100,31 @@ Each entry: problem → options → choice → why → impact.
 - **Impact:** one JSON shape `{"error": {"code", "message", "details"?}}` for every adapter.
   Failures are cached for the refresh period so a failing upstream is not retried in a loop.
 
+## D12. `safe_fetch()` on the standard library, pinned to the checked address
+
+- **Problem:** the Epitech RSS route checked the host with `getaddrinfo` then let `requests`
+  resolve it again: a DNS answer that changes between the two (rebinding) reaches internal hosts.
+- **Options:** (a) `requests` + a custom adapter; (b) `urllib3` with a resolver hook;
+  (c) `http.client` with connection classes that connect to the validated IP.
+- **Choice:** (c).
+- **Why:** no new dependency, and pinning is a two-method override: the socket goes to the checked
+  IP while `Host`, SNI and certificate validation keep the host name. All resolved addresses must
+  be public (an attacker controlling DNS could otherwise mix a public and a private answer).
+- **Impact:** GET only, no connection pooling, no automatic decompression: enough for widget
+  feeds. Errors are `WidgetError`s with safe messages so widgets can let them propagate.
+
+## D13. Credential encryption and exposure to widgets
+
+- **Problem:** the Epitech code used `sha256(SECRET_KEY)` directly as the Fernet key, so rotating
+  `SECRET_KEY` silently destroyed every stored token, and any route could read any credential.
+- **Choice:** key = HKDF-SHA256(`CREDENTIALS_KEY`, info="widget_hub.credentials.v1"); without the
+  setting, `SECRET_KEY` (+ `SECRET_KEY_FALLBACKS` for decryption) and a system-check warning.
+  `CREDENTIALS_KEY` may be a list for rotation (MultiFernet). Widgets only get the owner's secret
+  for their own service, loaded in the request thread, and only if they set `uses_credential`,
+  which requires `cache_per_owner` (startup error otherwise).
+- **Impact:** a secret never crosses users through the cache, and losing the key only makes
+  secrets unreadable (`None`), users then store them again.
+
 ## D10. `/about.json` client host and param types
 
 - **Problem:** the Epitech code trusted `X-Forwarded-For` unconditionally (spoofable when no proxy

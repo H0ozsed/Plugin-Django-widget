@@ -3,7 +3,7 @@
 Live checklist for `django-widget-hub` (import `widget_hub`, setting `WIDGET_HUB`).
 After a session restart, read this first and resume from the first unchecked step.
 
-**Current step:** 11 — Security helpers (`safe_fetch`, credential store)
+**Current step:** 12 — Built-in front
 
 ## Plan (one feature = one commit = one push)
 
@@ -17,7 +17,7 @@ After a session restart, read this first and resume from the first unchecked ste
 - [x] 8. `/about.json` discovery endpoint (Epitech format)
 - [x] 9. django-ninja adapter
 - [x] 10. DRF adapter
-- [ ] 11. Security helpers: `safe_fetch()` (SSRF) and encrypted credential store (Fernet)
+- [x] 11. Security helpers: `safe_fetch()` (SSRF) and encrypted credential store (Fernet)
 - [ ] 12. Built-in front: `{% dashboard %}`, JS grid/drag/resize/settings/refresh, CSS light/dark
 - [ ] 13. Example project with 3 widgets (public API, user URL via `safe_fetch`, stored credential)
 - [ ] 14. Documentation and packaging (README, docs, CHANGELOG, CONTRIBUTING, build + install in fresh venv, TestPyPI release workflow)

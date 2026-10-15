@@ -276,5 +276,42 @@ def test_put_is_not_supported(api):
     assert api.call("put", f"/instances/{pk}", {"refresh_rate": 60})[0] == 405
 
 
+def test_credentials_endpoints(api, adapter, bob):
+    assert api.call("get", "/credentials") == (200, [])
+    assert api.call("put", "/credentials/vault", {"secret": "  ghp_abc  "}) == (204, None)
+    status, listed = api.call("get", "/credentials")
+    assert status == 200 and [c["service"] for c in listed] == ["vault"]
+    assert "ghp_abc" not in json.dumps(listed)
+
+    pk = create(api, service="vault", widget="whoami", params={})[1]["id"]
+    assert api.call("get", f"/instances/{pk}/data")[1]["data"] == {"has_secret": True, "length": 7}
+
+    other = Api(*adapter).login(bob)
+    assert other.call("get", "/credentials") == (200, [])
+    assert other.call("delete", "/credentials/vault")[0] == 404
+
+    assert api.call("delete", "/credentials/vault") == (204, None)
+    assert api.call("get", "/credentials") == (200, [])
+
+
+@pytest.mark.parametrize(
+    ("service", "body", "status", "details"),
+    [
+        ("demo", {"secret": "x"}, 404, None),
+        ("nope", {"secret": "x"}, 404, None),
+        ("vault", {}, 400, {"secret": "This field is required."}),
+        ("vault", {"secret": "   "}, 400, {"secret": "This field is required."}),
+        ("vault", {"secret": 3}, 400, {"secret": "This field is required."}),
+        ("vault", {"secret": "x" * 4097}, 400, {"secret": "Must be at most 4096 characters long."}),
+        ("vault", {"secret": "x", "extra": 1}, 400, {"extra": "Unknown field."}),
+    ],
+)
+def test_invalid_credential_requests(api, service, body, status, details):
+    got_status, got = api.call("put", f"/credentials/{service}", body)
+    assert got_status == status
+    if details:
+        assert got["error"]["details"] == details
+
+
 def test_non_integer_ids_do_not_match(api):
     assert api.call("get", "/instances/abc")[0] == 404

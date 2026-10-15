@@ -56,6 +56,10 @@ class Widget:
     * ``default_refresh_rate`` (seconds, ``int``; raised to ``MIN_REFRESH_RATE`` if lower)
     * ``cache_per_owner`` (``bool``): set it when ``fetch()`` returns user-specific data, so
       cached results are never shared between owners.
+    * ``uses_credential`` (``bool``): the owner's stored secret for this widget's service is
+      passed as ``context.credential`` (``None`` if they stored none). Requires
+      ``cache_per_owner = True``, so data obtained with one user's secret is never served to
+      another user.
     """
 
     service: ClassVar[Service]
@@ -64,6 +68,7 @@ class Widget:
     params: ClassVar[list[Param]] = []
     default_refresh_rate: ClassVar[int] = 300
     cache_per_owner: ClassVar[bool] = False
+    uses_credential: ClassVar[bool] = False
 
     @classmethod
     def check_declaration(cls) -> None:
@@ -85,6 +90,11 @@ class Widget:
             seen.add(param.name)
         if not isinstance(cls.default_refresh_rate, int) or cls.default_refresh_rate <= 0:
             raise ImproperlyConfigured(f"{label}.default_refresh_rate must be a positive integer.")
+        if cls.uses_credential and not cls.cache_per_owner:
+            raise ImproperlyConfigured(
+                f"{label} sets uses_credential = True: it must also set cache_per_owner = True, "
+                "otherwise data fetched with one user's secret would be served to other users."
+            )
 
     @classmethod
     def validate(cls, data: Any) -> dict[str, Any]:

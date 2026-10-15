@@ -20,7 +20,7 @@ from django.utils.module_loading import import_string
 
 from . import conf
 
-ACTIONS = ("list", "create", "retrieve", "update", "delete", "fetch", "catalog")
+ACTIONS = ("list", "create", "retrieve", "update", "delete", "fetch", "catalog", "credentials")
 """Values passed as ``action`` to the permission check."""
 
 SAFE_METHODS = ("GET", "HEAD", "OPTIONS", "TRACE")

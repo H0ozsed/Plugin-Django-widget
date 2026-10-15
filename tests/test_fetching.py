@@ -184,10 +184,17 @@ class TestRefreshRateLimits:
 
 class TestChecks:
     def ids(self):
-        return [e.id for e in check_settings()]
+        return [e.id for e in check_settings() if e.is_serious()]
 
     def test_check_is_registered(self):
         assert check_settings in registry.get_checks()
+
+    @override_settings(WIDGET_HUB={})
+    def test_missing_credentials_key_warns(self):
+        assert [e.id for e in check_settings()] == ["widget_hub.W001"]
+
+    def test_credentials_key_set_no_warning(self):
+        assert [e.id for e in check_settings()] == []
 
     def test_default_settings_are_valid(self):
         assert self.ids() == []

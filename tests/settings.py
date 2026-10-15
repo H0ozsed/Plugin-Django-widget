@@ -49,3 +49,5 @@ TEMPLATES = [
 ]
 
 STATIC_URL = "/static/"
+
+WIDGET_HUB = {"CREDENTIALS_KEY": "tests-only-credentials-key"}

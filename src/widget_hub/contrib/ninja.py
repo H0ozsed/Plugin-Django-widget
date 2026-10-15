@@ -44,6 +44,18 @@ _INSTANCE_BODY = {
 }
 
 
+_SECRET = {
+    "requestBody": {
+        "content": {
+            "application/json": {
+                "schema": {"type": "object", "properties": {"secret": {"type": "string"}}}
+            }
+        },
+        "required": True,
+    }
+}
+
+
 def _run(request: HttpRequest, name: str, operation: Any) -> api.Result:
     # ninja sets request.auth to whatever one of the API's authenticators returned.
     authenticated = getattr(request, "auth", None) is not None
@@ -112,5 +124,28 @@ def build_router(**router_kwargs: Any) -> Router:
     def instance_data(request: HttpRequest, instance_id: int) -> HttpResponse:
         """Return the widget's data for this instance (cached for its refresh rate)."""
         return _respond(_run(request, "fetch", lambda o: api.fetch_data(o, instance_id)))
+
+    @router.get("/credentials", operation_id="widget_hub_credentials")
+    def list_credentials(request: HttpRequest) -> HttpResponse:
+        """List services the current user stored a credential for (secrets are never returned)."""
+        return _respond(_run(request, "credentials", api.list_credentials))
+
+    @router.put(
+        "/credentials/{service}", operation_id="widget_hub_set_credential", openapi_extra=_SECRET
+    )
+    def set_credential(request: HttpRequest, service: str) -> HttpResponse:
+        """Store the current user's secret for a service (encrypted at rest)."""
+        return _respond(
+            _run(
+                request,
+                "credentials",
+                lambda o: api.set_credential(o, service, api.parse_json_body(request.body)),
+            )
+        )
+
+    @router.delete("/credentials/{service}", operation_id="widget_hub_delete_credential")
+    def delete_credential(request: HttpRequest, service: str) -> HttpResponse:
+        """Delete the current user's secret for a service."""
+        return _respond(_run(request, "credentials", lambda o: api.delete_credential(o, service)))
 
     return router

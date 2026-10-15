@@ -33,6 +33,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   cookie-authenticated unsafe requests reaching CSRF-exempt API views.
 - DRF adapter `widget_hub.contrib.drf.build_router()` (`CatalogViewSet`, `WidgetInstanceViewSet`)
   with the same routes, responses and error contract as the ninja adapter.
+- `widget_hub.security.safe_fetch()`: SSRF-safe GET (public addresses only, connection pinned to
+  the checked address, re-validated redirects, timeout, size limit) raising `SafeFetchError`.
+- Encrypted credential store (`Credential` model, `widget_hub.credentials`, Fernet with an
+  HKDF-derived key from `CREDENTIALS_KEY` or `SECRET_KEY`), `Widget.uses_credential`,
+  `FetchContext.credential`, `/credentials` endpoints in both adapters, warning `widget_hub.W001`.
+- New dependency: `cryptography`.
 
 ### Security
 

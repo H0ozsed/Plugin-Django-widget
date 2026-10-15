@@ -29,6 +29,12 @@ DEFAULTS: dict[str, Any] = {
     "OWNER_RESOLVER": "widget_hub.auth.default_owner",
     # Dotted path or callable: (request, owner, action) -> bool, or None to allow everything.
     "PERMISSION_CHECK": None,
+    # Secret (or list of secrets, first one encrypts) for the credential store. None: SECRET_KEY.
+    "CREDENTIALS_KEY": None,
+    # safe_fetch(): overall deadline (seconds), largest body (bytes), redirects followed.
+    "SAFE_FETCH_TIMEOUT": 5.0,
+    "SAFE_FETCH_MAX_BYTES": 2 * 1024 * 1024,
+    "SAFE_FETCH_MAX_REDIRECTS": 3,
 }
 """Documented defaults; the README settings table mirrors this dict."""
 

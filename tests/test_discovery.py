@@ -15,7 +15,8 @@ def test_about_json_is_public_and_follows_the_epitech_format(client):
     assert body["client"] == {"host": "10.0.0.7"}
     assert abs(body["server"]["current_time"] - time.time()) < 5
     assert isinstance(body["server"]["current_time"], int)
-    assert body["server"]["services"] == [
+    assert [s["name"] for s in body["server"]["services"]] == ["demo", "vault"]
+    assert body["server"]["services"][:1] == [
         {
             "name": "demo",
             "widgets": [

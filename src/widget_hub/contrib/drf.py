@@ -91,9 +91,33 @@ class WidgetInstanceViewSet(viewsets.ViewSet):
         return _handle(request, "fetch", lambda owner: api.fetch_data(owner, pk))
 
 
+class CredentialViewSet(viewsets.ViewSet):
+    """The current user's stored credentials: list services, ``PUT``/``DELETE`` by service."""
+
+    lookup_field = "service"
+    lookup_value_regex = r"[a-z][a-z0-9_]*"
+
+    def list(self, request: Request) -> Response:
+        """List services with a stored credential (secrets are never returned)."""
+        return _handle(request, "credentials", api.list_credentials)
+
+    def update(self, request: Request, service: str) -> Response:
+        """Store the secret for ``service`` from body ``{"secret": "..."}``."""
+        return _handle(
+            request,
+            "credentials",
+            lambda owner: api.set_credential(owner, service, api.parse_json_body(request.body)),
+        )
+
+    def destroy(self, request: Request, service: str) -> Response:
+        """Delete the secret for ``service``."""
+        return _handle(request, "credentials", lambda owner: api.delete_credential(owner, service))
+
+
 def build_router(*, trailing_slash: bool = False) -> SimpleRouter:
-    """Return a ``SimpleRouter`` with ``catalog`` and ``instances`` registered."""
+    """Return a ``SimpleRouter`` with ``catalog``, ``instances`` and ``credentials``."""
     router = SimpleRouter(trailing_slash=trailing_slash)
     router.register("catalog", CatalogViewSet, basename="widget-hub-catalog")
     router.register("instances", WidgetInstanceViewSet, basename="widget-hub-instance")
+    router.register("credentials", CredentialViewSet, basename="widget-hub-credential")
     return router

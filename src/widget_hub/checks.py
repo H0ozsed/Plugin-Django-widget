@@ -5,19 +5,19 @@ from __future__ import annotations
 from typing import Any
 
 from django.conf import settings
-from django.core.checks import Error, register
+from django.core.checks import CheckMessage, Error, Warning, register
 from django.utils.module_loading import import_string
 
 from . import conf
 
 
 @register()
-def check_settings(app_configs: Any = None, **kwargs: Any) -> list[Error]:
+def check_settings(app_configs: Any = None, **kwargs: Any) -> list[CheckMessage]:
     """Report unknown keys and inconsistent values in ``settings.WIDGET_HUB``."""
     user_settings = getattr(settings, "WIDGET_HUB", {})
     if not isinstance(user_settings, dict):
         return [Error("WIDGET_HUB must be a dict.", id="widget_hub.E001")]
-    errors = [
+    errors: list[CheckMessage] = [
         Error(
             f"Unknown key {key!r} in WIDGET_HUB.",
             hint=f"Valid keys: {', '.join(sorted(conf.DEFAULTS))}.",
@@ -63,6 +63,16 @@ def check_settings(app_configs: Any = None, **kwargs: Any) -> list[Error]:
                     f"WIDGET_HUB {hook} must be a dotted path or a callable.", id="widget_hub.E006"
                 )
             )
+    if not conf.get("CREDENTIALS_KEY"):
+        errors.append(
+            Warning(
+                "WIDGET_HUB CREDENTIALS_KEY is not set: stored credentials are encrypted with a "
+                "key derived from SECRET_KEY.",
+                hint="Set a dedicated secret so rotating SECRET_KEY without keeping it in "
+                "SECRET_KEY_FALLBACKS does not make stored credentials unreadable.",
+                id="widget_hub.W001",
+            )
+        )
     if conf.get("CACHE_ALIAS") not in settings.CACHES:
         errors.append(
             Error(

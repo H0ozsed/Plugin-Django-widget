@@ -14,10 +14,10 @@ from typing import Any
 from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest
 
-from . import services
+from . import credentials, services
 from .auth import csrf_rejected, has_permission, resolve_owner
 from .errors import error_body, to_error_response
-from .exceptions import InvalidInput
+from .exceptions import InvalidInput, NotFound
 from .registry import registry
 
 Result = tuple[int, Any]
@@ -111,6 +111,38 @@ def update_instance(owner: AbstractBaseUser, instance_id: Any, payload: Any) -> 
 def delete_instance(owner: AbstractBaseUser, instance_id: Any) -> Result:
     """Delete an instance."""
     services.delete_instance(owner, instance_id)
+    return 204, None
+
+
+MAX_SECRET_LENGTH = 4096
+
+
+def list_credentials(owner: AbstractBaseUser) -> Result:
+    """Services the owner stored a credential for (never the secrets)."""
+    return 200, [
+        {"service": c.service, "updated_at": c.updated_at.isoformat()}
+        for c in credentials.list_credentials(owner)
+    ]
+
+
+def set_credential(owner: AbstractBaseUser, service: str, payload: Any) -> Result:
+    """Store the owner's secret for ``service`` (body ``{"secret": "..."}``), encrypted."""
+    if not any(w.uses_credential for w in registry.widgets_of(service)):
+        raise NotFound(f"No widget of service {service!r} uses a credential.")
+    fields = _fields(payload, ("secret",))
+    secret = fields.get("secret")
+    if not isinstance(secret, str) or not secret.strip():
+        raise InvalidInput({"secret": "This field is required."})
+    if len(secret) > MAX_SECRET_LENGTH:
+        raise InvalidInput({"secret": f"Must be at most {MAX_SECRET_LENGTH} characters long."})
+    credentials.set_credential(owner, service, secret.strip())
+    return 204, None
+
+
+def delete_credential(owner: AbstractBaseUser, service: str) -> Result:
+    """Delete the owner's secret for ``service``."""
+    if not credentials.delete_credential(owner, service):
+        raise NotFound(f"No credential stored for {service!r}.")
     return 204, None
 
 

@@ -60,3 +60,32 @@ class WidgetInstance(models.Model):
             raise ValidationError(
                 {"params": [f"{k}: {v}" for k, v in exc.errors.items()]}
             ) from None
+
+
+class Credential(models.Model):
+    """A secret (API token) a user stored for one service, encrypted at rest.
+
+    Use :mod:`widget_hub.credentials` to read and write it; ``encrypted_secret`` is never
+    exposed in ``str()``, ``repr()``, the admin or the API.
+    """
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="widget_credentials"
+    )
+    service = models.CharField(max_length=100)
+    encrypted_secret = models.TextField(editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "service"], name="widget_hub_one_credential_per_service"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.service} credential of {self.owner}"
+
+    def __repr__(self) -> str:
+        return f"<Credential {self.service} owner={self.owner_id}>"

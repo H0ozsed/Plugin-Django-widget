@@ -16,3 +16,21 @@ class Echo(Widget):
 
     def fetch(self, params, context):
         return {"text": params["text"] * params["times"]}
+
+
+vault = Service("vault", description="Widgets using a stored secret")
+
+
+@register
+class Whoami(Widget):
+    """Reports whether a credential reached fetch() (and its length, never its value)."""
+
+    service = vault
+    name = "whoami"
+    params = [params.String("label", default="me")]
+    cache_per_owner = True
+    uses_credential = True
+
+    def fetch(self, params, context):
+        secret = context.credential
+        return {"has_secret": secret is not None, "length": len(secret or "")}
