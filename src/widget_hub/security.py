@@ -116,22 +116,47 @@ def is_public_address(address: str) -> bool:
     return _is_public_ip(ip)
 
 
+_pending_lookups = 0
+_lookups_lock = threading.Lock()
+
+
+def pending_lookups() -> int:
+    """Number of DNS lookups still running, abandoned ones included."""
+    return _pending_lookups
+
+
 def resolve_public_address(host: str, port: int, timeout: float | None = None) -> str:
     """Resolve ``host`` and return one address, refusing the host if any address is not public.
 
     ``getaddrinfo`` has no timeout of its own and a slow authoritative DNS server is under the
     URL owner's control, so resolution runs in a daemon thread and is abandoned after ``timeout``.
+    Abandoned lookups keep running until the system resolver gives up, so pending lookups are
+    capped by ``MAX_CONCURRENT_FETCHES``; past the cap the call fails at once (503).
     """
+    global _pending_lookups
+    with _lookups_lock:
+        if _pending_lookups >= conf.get("MAX_CONCURRENT_FETCHES"):
+            raise SafeFetchError("Too many pending DNS lookups, try again later.", 503)
+        _pending_lookups += 1
     outcome: dict[str, Any] = {}
 
     def resolve() -> None:
+        global _pending_lookups
         try:
             outcome["infos"] = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
         except (OSError, UnicodeError) as exc:
             outcome["error"] = exc
+        finally:
+            with _lookups_lock:
+                _pending_lookups -= 1
 
     resolver = threading.Thread(target=resolve, name="widget_hub_dns", daemon=True)
-    resolver.start()
+    try:
+        resolver.start()
+    except RuntimeError:
+        with _lookups_lock:
+            _pending_lookups -= 1
+        raise SafeFetchError("Too many pending DNS lookups, try again later.", 503) from None
     resolver.join(timeout)
     if resolver.is_alive():
         raise SafeFetchError(f"Could not resolve {host} in time.", 504)

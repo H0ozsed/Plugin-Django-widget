@@ -121,7 +121,9 @@ Each entry: problem → options → choice → why → impact.
   → embedded IPv4 must be public too, and special ranges are rejected explicitly because
   `is_global` changed across Python versions. A further review pointed out that DNS resolution
   had no deadline (a slow authoritative server is under the URL owner's control): it now runs in
-  a daemon thread joined with the remaining time. The TLS handshake was also suspected; a test
+  a daemon thread joined with the remaining time; since an abandoned lookup keeps its thread until
+  the system resolver gives up, pending lookups are capped by `MAX_CONCURRENT_FETCHES` (503 past
+  the cap), mirroring the cap on `fetch()` threads. The TLS handshake was also suspected; a test
   trickling a TLS record shows CPython already applies the socket timeout to the whole handshake,
   so no change was made there beyond keeping that test as a guard.
 

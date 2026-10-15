@@ -333,6 +333,32 @@ def test_slow_dns_does_not_extend_the_deadline(monkeypatch):
     release.set()
 
 
+@override_settings(WIDGET_HUB={"MAX_CONCURRENT_FETCHES": 1})
+def test_abandoned_dns_lookups_are_capped(monkeypatch):
+    """Regression: abandoned lookups must not accumulate threads without bound."""
+    deadline = time.monotonic() + 2
+    while security.pending_lookups() and time.monotonic() < deadline:
+        time.sleep(0.01)  # let lookups released by earlier tests finish
+    release = threading.Event()
+
+    def slow_getaddrinfo(*args, **kwargs):
+        release.wait(3)
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (PUBLIC_IP, 80))]
+
+    monkeypatch.setattr(security.socket, "getaddrinfo", slow_getaddrinfo)
+    with pytest.raises(SafeFetchError, match="in time"):
+        safe_fetch("http://slow.test/", timeout=0.1)
+    assert security.pending_lookups() == 1  # still running in the background
+    with pytest.raises(SafeFetchError, match="Too many pending DNS lookups") as info:
+        safe_fetch("http://slow.test/", timeout=0.1)
+    assert info.value.status == 503
+    release.set()
+    deadline = time.monotonic() + 2
+    while security.pending_lookups() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert security.pending_lookups() == 0
+
+
 def test_tls_handshake_drip_does_not_extend_the_deadline(monkeypatch):
     """A server trickling a TLS record is cut off at the deadline (CPython applies the socket
     timeout to the whole handshake; this guards that assumption)."""
