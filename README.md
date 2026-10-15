@@ -149,6 +149,23 @@ API has no authenticator and the user comes from the session cookie, unsafe meth
 valid CSRF token; requests authenticated by a ninja authenticator are left to it. Note: when
 your own ninja authenticator rejects a request, ninja answers with its own 401 body.
 
+## DRF adapter
+
+```bash
+pip install "django-widget-hub[drf]"
+```
+
+```python
+from widget_hub.contrib.drf import build_router
+
+urlpatterns = [path("api/widgets/", include(build_router().urls))]
+```
+
+Same routes and responses as the ninja adapter (`catalog`, `instances`, `instances/{id}`,
+`instances/{id}/data`; pass `build_router(trailing_slash=True)` for DRF's usual slashes). Views use
+your `DEFAULT_AUTHENTICATION_CLASSES`; DRF's `SessionAuthentication` enforces CSRF for session
+users and answers CSRF failures with its own `{"detail": ...}` body. Bodies must be JSON.
+
 ## The `/about.json` endpoint
 
 `path("", include("widget_hub.urls"))` publishes a public `GET /about.json` in the Epitech

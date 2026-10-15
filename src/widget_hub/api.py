@@ -28,13 +28,21 @@ UPDATE_FIELDS = ("params", "refresh_rate", "position")
 
 
 def handle(
-    request: HttpRequest, action: str, operation: Callable[[AbstractBaseUser], Result]
+    request: HttpRequest,
+    action: str,
+    operation: Callable[[AbstractBaseUser], Result],
+    *,
+    enforce_csrf: bool = True,
 ) -> Result:
-    """Authenticate, authorise and run ``operation(owner)``, returning ``(status, body)``."""
+    """Authenticate, authorise and run ``operation(owner)``, returning ``(status, body)``.
+
+    ``enforce_csrf=False`` is for frameworks whose authenticators already enforce CSRF on
+    cookie-based authentication (DRF's ``SessionAuthentication``).
+    """
     owner = resolve_owner(request)
     if owner is None:
         return 401, error_body("not_authenticated", "Authentication required.")
-    if csrf_rejected(request):
+    if enforce_csrf and csrf_rejected(request):
         return 403, error_body("permission_denied", "CSRF verification failed.")
     if not has_permission(request, owner, action):
         return 403, error_body("permission_denied", "Permission denied.")

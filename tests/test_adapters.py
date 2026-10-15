@@ -13,7 +13,11 @@ pytestmark = pytest.mark.django_db
 ADAPTERS = {
     "ninja-session": ("/ninja/session/widgets", "session"),
     "ninja-token": ("/ninja/token/widgets", "token"),
+    "drf-session": ("/drf/widgets", "session"),
+    "drf-token": ("/drf/widgets", "token"),
 }
+SESSION_ADAPTERS = ["ninja-session", "drf-session"]
+TOKEN_ADAPTERS = ["ninja-token", "drf-token"]
 
 
 class Api:
@@ -204,12 +208,15 @@ def test_owner_resolver_hook(api, bob):
         assert api.call("get", f"/instances/{pk}")[0] == 404
 
 
-def test_session_auth_requires_csrf_for_unsafe_methods(alice):
-    base, _ = ADAPTERS["ninja-session"]
-    api = Api(base, "session", enforce_csrf=True).login(alice)
+@pytest.mark.parametrize("name", SESSION_ADAPTERS)
+def test_session_auth_requires_csrf_for_unsafe_methods(alice, name):
+    api = Api(*ADAPTERS[name], enforce_csrf=True).login(alice)
     status, body = create(api)
     assert status == 403
-    assert body == {"error": {"code": "permission_denied", "message": "CSRF verification failed."}}
+    if name.startswith("ninja"):  # DRF's SessionAuthentication answers with its own body
+        assert body == {
+            "error": {"code": "permission_denied", "message": "CSRF verification failed."}
+        }
     assert api.call("get", "/instances")[0] == 200  # safe methods are not affected
 
     api.client.get("/admin/login/")  # any page rendering {% csrf_token %} sets the cookie
@@ -217,10 +224,15 @@ def test_session_auth_requires_csrf_for_unsafe_methods(alice):
     assert create(api)[0] == 201
 
 
-def test_token_auth_is_not_subject_to_csrf(alice):
-    base, _ = ADAPTERS["ninja-token"]
-    api = Api(base, "token", enforce_csrf=True).login(alice)
+@pytest.mark.parametrize("name", TOKEN_ADAPTERS)
+def test_token_auth_is_not_subject_to_csrf(alice, name):
+    api = Api(*ADAPTERS[name], enforce_csrf=True).login(alice)
     assert create(api)[0] == 201
+
+
+def test_put_is_not_supported(api):
+    pk = create(api)[1]["id"]
+    assert api.call("put", f"/instances/{pk}", {"refresh_rate": 60})[0] == 405
 
 
 def test_non_integer_ids_do_not_match(api):

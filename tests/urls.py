@@ -6,6 +6,7 @@ from django.urls import include, path
 from ninja import NinjaAPI
 from ninja.security import HttpBearer
 
+from widget_hub.contrib import drf
 from widget_hub.contrib.ninja import build_router
 
 
@@ -26,5 +27,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("ninja/session/", ninja_session_api.urls),
     path("ninja/token/", ninja_token_api.urls),
+    path("drf/widgets/", include(drf.build_router().urls)),
     path("", include("widget_hub.urls")),
 ]

@@ -31,3 +31,5 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - django-ninja adapter `widget_hub.contrib.ninja.build_router()`; shared HTTP operations in
   `widget_hub.api`; swappable `OWNER_RESOLVER` and `PERMISSION_CHECK`; CSRF enforced for
   cookie-authenticated unsafe requests reaching CSRF-exempt API views.
+- DRF adapter `widget_hub.contrib.drf.build_router()` (`CatalogViewSet`, `WidgetInstanceViewSet`)
+  with the same routes, responses and error contract as the ninja adapter.

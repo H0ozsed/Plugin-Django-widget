@@ -13,9 +13,17 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
     "widget_hub",
     "tests.demoapp",
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "tests.drf_auth.BearerUsername",
+    ],
+}
 
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
