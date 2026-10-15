@@ -167,6 +167,19 @@ Each entry: problem → options → choice → why → impact.
   `release.yml` and environment `testpypi` as a trusted publisher (a maintainer action). The
   README image uses an absolute URL so it renders on (Test)PyPI.
 
+## D16. Swappable position validation
+
+- **Problem:** the plugin validated positions as grid cells `{x, y, w, h}` (what the built-in
+  front uses). Migrating the Epitech dashboard showed that its React front places widgets freely
+  in pixels and saves `{x, y, width, height}`: every move would have been rejected with a 400.
+- **Options:** (a) accept any JSON object (no validation); (b) support several hard-coded layout
+  models; (c) a `POSITION_VALIDATOR` hook, like the owner resolver and permission check.
+- **Choice:** (c), default `widget_hub.services.clean_position`.
+- **Why:** positions stay validated, a project with its own front decides what a position is,
+  and it costs one setting. Hook loading is shared in `conf.hook()`.
+- **Impact:** the built-in front still assumes the grid; a custom validator goes with a custom
+  front.
+
 ## D10. `/about.json` client host and param types
 
 - **Problem:** the Epitech code trusted `X-Forwarded-For` unconditionally (spoofable when no proxy

@@ -182,6 +182,7 @@ All settings live in one optional dict, `WIDGET_HUB = {...}`. Unknown keys and b
 | `ABOUT_TRUST_X_FORWARDED_FOR` | `False` | take `/about.json` `client.host` from `X-Forwarded-For` (only behind a proxy that sets it) |
 | `OWNER_RESOLVER` | `"widget_hub.auth.default_owner"` | `request -> user or None` (dotted path or callable) |
 | `PERMISSION_CHECK` | `None` | `(request, owner, action) -> bool`; `None` allows everything |
+| `POSITION_VALIDATOR` | `"widget_hub.services.clean_position"` | `value -> dict` raising `ValueError(message)`; the default accepts the built-in front's grid `{x, y, w, h}`, swap it for a front with another layout model (e.g. pixels) |
 | `CREDENTIALS_KEY` | `None` | secret, or `[new, old, ...]` for rotation; `None` derives from `SECRET_KEY` (warning `W001`) |
 | `SAFE_FETCH_TIMEOUT` | `5.0` | `safe_fetch()` overall deadline, seconds |
 | `SAFE_FETCH_MAX_BYTES` | `2097152` | largest body `safe_fetch()` accepts |

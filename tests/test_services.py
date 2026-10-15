@@ -1,4 +1,5 @@
 import pytest
+from django.test import override_settings
 
 from widget_hub import services
 from widget_hub.exceptions import InvalidInput, NotFound
@@ -61,6 +62,24 @@ def test_position_validation(alice, position, message):
     with pytest.raises(InvalidInput) as info:
         create(alice, position=position)
     assert info.value.errors == {"position": message}
+
+
+def pixel_layout(value):
+    """A custom POSITION_VALIDATOR for a free-placement front (pixels)."""
+    if not isinstance(value, dict) or set(value) - {"x", "y", "width", "height"}:
+        raise ValueError("Expected x, y, width, height in pixels.")
+    return {k: int(v) for k, v in value.items()}
+
+
+def test_position_validator_is_swappable(alice):
+    with override_settings(WIDGET_HUB={"POSITION_VALIDATOR": pixel_layout}):
+        instance = create(alice, position={"x": 60, "y": 100, "width": 300, "height": 240})
+        assert instance.position == {"x": 60, "y": 100, "width": 300, "height": 240}
+        with pytest.raises(InvalidInput) as info:
+            create(alice, position={"w": 2})
+        assert info.value.errors == {"position": "Expected x, y, width, height in pixels."}
+    with override_settings(WIDGET_HUB={"POSITION_VALIDATOR": "tests.test_services.pixel_layout"}):
+        assert create(alice, position={"width": 1}).position == {"width": 1}
 
 
 def test_list_is_scoped_to_owner(alice, bob):

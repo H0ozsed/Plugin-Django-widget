@@ -206,7 +206,7 @@ def _clean_fields(widget: Widget, errors: dict[str, object], **fields: Any) -> d
             cleaned["refresh_rate"] = value
     if "position" in fields:
         try:
-            cleaned["position"] = clean_position(fields["position"])
+            cleaned["position"] = conf.hook("POSITION_VALIDATOR")(fields["position"])
         except ValueError as exc:
             errors["position"] = str(exc)
     return cleaned

@@ -48,7 +48,7 @@ def check_settings(app_configs: Any = None, **kwargs: Any) -> list[CheckMessage]
                 id="widget_hub.E005",
             )
         )
-    for hook in ("OWNER_RESOLVER", "PERMISSION_CHECK"):
+    for hook in conf.HOOKS:
         value = conf.get(hook)
         if isinstance(value, str):
             try:

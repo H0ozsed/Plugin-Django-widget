@@ -10,13 +10,10 @@ Both hooks are swappable through settings (dotted paths):
 
 from __future__ import annotations
 
-from typing import Any
-
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest
 from django.middleware.csrf import CsrfViewMiddleware
-from django.utils.module_loading import import_string
 
 from . import conf
 
@@ -40,12 +37,12 @@ def default_owner(request: HttpRequest) -> AbstractBaseUser | None:
 
 def resolve_owner(request: HttpRequest) -> AbstractBaseUser | None:
     """Call the configured ``OWNER_RESOLVER``."""
-    return _hook("OWNER_RESOLVER")(request)
+    return conf.hook("OWNER_RESOLVER")(request)
 
 
 def has_permission(request: HttpRequest, owner: AbstractBaseUser, action: str) -> bool:
     """Call the configured ``PERMISSION_CHECK`` (allows everything when unset)."""
-    check = _hook("PERMISSION_CHECK")
+    check = conf.hook("PERMISSION_CHECK")
     return True if check is None else bool(check(request, owner, action))
 
 
@@ -69,8 +66,3 @@ def csrf_rejected(request: HttpRequest, *, framework_authenticated: bool) -> boo
 
 def _csrf_probe(request: HttpRequest) -> None:
     """Placeholder view handed to ``CsrfViewMiddleware.process_view`` (never csrf_exempt)."""
-
-
-def _hook(name: str) -> Any:
-    value = conf.get(name)
-    return import_string(value) if isinstance(value, str) else value

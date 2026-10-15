@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.conf import settings
+from django.utils.module_loading import import_string
 
 DEFAULTS: dict[str, Any] = {
     # Alias in settings.CACHES used for fetch() results. Django's own default cache is LocMem.
@@ -29,6 +30,9 @@ DEFAULTS: dict[str, Any] = {
     "OWNER_RESOLVER": "widget_hub.auth.default_owner",
     # Dotted path or callable: (request, owner, action) -> bool, or None to allow everything.
     "PERMISSION_CHECK": None,
+    # Dotted path or callable: position value -> cleaned dict, raising ValueError(message).
+    # The default accepts the built-in front's grid ({"x", "y", "w", "h"}).
+    "POSITION_VALIDATOR": "widget_hub.services.clean_position",
     # Secret (or list of secrets, first one encrypts) for the credential store. None: SECRET_KEY.
     "CREDENTIALS_KEY": None,
     # safe_fetch(): overall deadline (seconds), largest body (bytes), redirects followed.
@@ -39,7 +43,17 @@ DEFAULTS: dict[str, Any] = {
 """Documented defaults; the README settings table mirrors this dict."""
 
 
+HOOKS = ("OWNER_RESOLVER", "PERMISSION_CHECK", "POSITION_VALIDATOR")
+"""Settings holding a dotted path or a callable."""
+
+
 def get(name: str) -> Any:
     """Return setting ``name`` from ``settings.WIDGET_HUB``, falling back to :data:`DEFAULTS`."""
     user_settings = getattr(settings, "WIDGET_HUB", {})
     return user_settings.get(name, DEFAULTS[name])
+
+
+def hook(name: str) -> Any:
+    """Return the callable configured for hook setting ``name`` (``None`` if unset)."""
+    value = get(name)
+    return import_string(value) if isinstance(value, str) else value
