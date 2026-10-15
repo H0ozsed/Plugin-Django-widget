@@ -10,7 +10,7 @@
 
   var COLUMNS = 12;
   var MAX_ROWS = 12;
-  var DEFAULT_SIZE = { w: 4, h: 2 };
+  var DEFAULT_SIZE = { w: 4, h: 3 };
   var SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];
   var renderers = {};
 
@@ -49,11 +49,40 @@
     };
   }
 
+  /** CSS grid placement; ``order`` keeps reading order when small screens stack widgets. */
   function gridStyle(position) {
     return {
       gridColumn: position.x + 1 + " / span " + position.w,
       gridRow: position.y + 1 + " / span " + position.h,
+      order: String(position.y * COLUMNS + position.x),
     };
+  }
+
+  /** "2 min ago"-style label for an age in seconds. */
+  function relativeTime(seconds) {
+    if (seconds < 45) return "just now";
+    var minutes = Math.round(seconds / 60);
+    if (minutes < 60) return minutes + " min ago";
+    var hours = Math.round(minutes / 60);
+    if (hours < 24) return hours + " h ago";
+    var days = Math.round(hours / 24);
+    return days + (days === 1 ? " day ago" : " days ago");
+  }
+
+  /** Short summary of an instance's text params (URLs shown as their host), for subtitles. */
+  function summarizeParams(params, values) {
+    var parts = [];
+    (params || []).forEach(function (param) {
+      var value = values ? values[param.name] : undefined;
+      if (value === undefined || value === null || value === "") return;
+      if (param.type === "url") {
+        var match = /^https?:\/\/([^/?#:]+)/i.exec(String(value));
+        parts.push(match ? match[1] : String(value));
+      } else if (param.type === "string" || param.type === "choice") {
+        parts.push(String(value));
+      }
+    });
+    return parts.join(" · ");
   }
 
   function samePosition(a, b) {
@@ -165,6 +194,54 @@
     return node;
   }
 
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  // 24×24 stroke icons drawn for this file (no third-party icon set).
+  var ICONS = {
+    grip: [["circle", { cx: 9, cy: 6, r: 1 }], ["circle", { cx: 15, cy: 6, r: 1 }],
+           ["circle", { cx: 9, cy: 12, r: 1 }], ["circle", { cx: 15, cy: 12, r: 1 }],
+           ["circle", { cx: 9, cy: 18, r: 1 }], ["circle", { cx: 15, cy: 18, r: 1 }]],
+    refresh: [["path", { d: "M20 12a8 8 0 1 1-2.34-5.66" }], ["path", { d: "M20 4v5h-5" }]],
+    sliders: [["path", { d: "M4 7h10M18 7h2M4 17h4M12 17h8" }],
+              ["circle", { cx: 16, cy: 7, r: 2 }], ["circle", { cx: 10, cy: 17, r: 2 }]],
+    close: [["path", { d: "M6 6l12 12M18 6L6 18" }]],
+    alert: [["circle", { cx: 12, cy: 12, r: 9 }], ["path", { d: "M12 7.5v5.5M12 16.5v.01" }]],
+  }; // prettier-ignore
+
+  function icon(name) {
+    var svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("class", "wh-icon");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    ICONS[name].forEach(function (shape) {
+      var node = document.createElementNS(SVG_NS, shape[0]);
+      Object.keys(shape[1]).forEach(function (key) {
+        node.setAttribute(key, String(shape[1][key]));
+      });
+      svg.appendChild(node);
+    });
+    return svg;
+  }
+
+  function iconButton(name, label, extraClass) {
+    var button = el("button", {
+      type: "button",
+      className: "wh-icon-button" + (extraClass ? " " + extraClass : ""),
+      "aria-label": label,
+      title: label,
+    });
+    button.appendChild(icon(name));
+    return button;
+  }
+
+  function skeleton() {
+    return el("div", { className: "wh-skeleton", "aria-hidden": "true" }, [
+      el("span"),
+      el("span"),
+      el("span"),
+    ]);
+  }
+
   /** Generic, safe rendering of any JSON value. */
   function renderValue(value, depth) {
     depth = depth || 0;
@@ -250,15 +327,19 @@
 
   Dashboard.prototype.start = function () {
     var self = this;
-    var add = this.root.querySelector("[data-wh-add]");
-    if (add) {
+    this.root.querySelectorAll("[data-wh-add]").forEach(function (add) {
       add.addEventListener("click", function () {
         self.openForm(null, add);
       });
-    }
+    });
     document.addEventListener("visibilitychange", function () {
       self.onVisibilityChange();
     });
+    setInterval(function () {
+      Object.keys(self.widgets).forEach(function (id) {
+        self.widgets[id].updateMeta();
+      });
+    }, 30000);
     return Promise.all([
       this.client.request("GET", this.urls.catalog),
       this.client.request("GET", this.urls.instances),
@@ -359,37 +440,34 @@
     return base;
   };
 
+  WidgetView.prototype.subtitle = function () {
+    var schema = this.dashboard.schemaFor(this.instance);
+    return schema ? summarizeParams(schema.params, this.instance.params) : "";
+  };
+
   WidgetView.prototype.build = function () {
     var self = this;
     var titleId = "wh-title-" + ++uid;
     this.title = el("h3", { className: "wh-widget-title", id: titleId, text: this.label() });
-    this.handle = el("button", {
-      type: "button",
-      className: "wh-icon-button wh-handle",
-      "aria-label": "Move or resize " + this.label(),
-      "aria-describedby": "wh-move-help",
-      text: "⠿",
-    });
-    var refresh = el("button", {
-      type: "button",
-      className: "wh-icon-button",
-      "aria-label": "Refresh " + this.label(),
-      text: "↻",
-    });
-    var settings = el("button", {
-      type: "button",
-      className: "wh-icon-button",
-      "aria-label": "Settings of " + this.label(),
-      text: "⚙",
-    });
-    var remove = el("button", {
-      type: "button",
-      className: "wh-icon-button wh-button-danger",
-      "aria-label": "Remove " + this.label(),
-      text: "✕",
-    });
-    this.error = el("p", { className: "wh-widget-error", role: "status", hidden: true });
-    this.content = el("div", { className: "wh-data" });
+    this.subtitleNode = el("p", { className: "wh-widget-subtitle", text: this.subtitle() });
+    this.handle = iconButton("grip", "Move or resize " + this.label(), "wh-handle");
+    this.handle.setAttribute("aria-describedby", "wh-move-help");
+    this.refreshButton = iconButton("refresh", "Refresh " + this.label());
+    var settings = iconButton("sliders", "Settings of " + this.label());
+    var remove = iconButton("close", "Remove " + this.label(), "wh-danger");
+    var retry = el("button", { type: "button", className: "wh-link-button", text: "Try again" });
+    this.errorText = el("p");
+    this.error = el("div", { className: "wh-widget-error", role: "status", hidden: true }, [
+      icon("alert"),
+      el("div", { className: "wh-widget-error-text" }, [
+        this.errorText,
+        el("p", { className: "wh-error-hint" }, [
+          document.createTextNode("Retries at the next refresh. "),
+          retry,
+        ]),
+      ]),
+    ]);
+    this.content = el("div", { className: "wh-data" }, [skeleton()]);
     this.body = el("div", { className: "wh-widget-body" }, [this.error, this.content]);
     this.meta = el("p", { className: "wh-widget-meta" });
     this.resizer = el("span", { className: "wh-resize", "aria-hidden": "true" });
@@ -399,8 +477,8 @@
       [
         el("header", { className: "wh-widget-header" }, [
           this.handle,
-          this.title,
-          refresh,
+          el("div", { className: "wh-widget-heading" }, [this.title, this.subtitleNode]),
+          this.refreshButton,
           settings,
           remove,
         ]),
@@ -411,7 +489,10 @@
     );
     this.applyPosition();
 
-    refresh.addEventListener("click", function () {
+    this.refreshButton.addEventListener("click", function () {
+      self.load();
+    });
+    retry.addEventListener("click", function () {
       self.load();
     });
     settings.addEventListener("click", function () {
@@ -431,6 +512,7 @@
     var style = gridStyle(this.position);
     this.node.style.gridColumn = style.gridColumn;
     this.node.style.gridRow = style.gridRow;
+    this.node.style.order = style.order;
   };
 
   WidgetView.prototype.describePosition = function () {
@@ -528,25 +610,37 @@
     var self = this;
     clearTimeout(this.timer);
     this.body.setAttribute("aria-busy", "true");
+    this.refreshButton.disabled = true;
+    this.refreshButton.firstChild.classList.add("wh-spin");
     var url = this.dashboard.instanceUrl(this.instance.id) + "/data";
     return this.dashboard.client
       .request("GET", url)
       .then(function (result) {
         self.error.hidden = true;
-        self.error.textContent = "";
         self.render(result.data);
-        var when = new Date(result.fetched_at);
-        self.meta.textContent = "Updated " + when.toLocaleTimeString();
+        self.hasData = true;
+        self.fetchedAt = Date.parse(result.fetched_at);
+        self.updateMeta();
       })
       .catch(function (error) {
         // Keep the last good data visible; the error stays inside this widget only.
-        self.error.textContent = error.message + " Retrying at the next refresh.";
+        if (!self.hasData) self.content.replaceChildren();
+        self.errorText.textContent = error.message;
         self.error.hidden = false;
       })
       .then(function () {
         self.body.removeAttribute("aria-busy");
+        self.refreshButton.disabled = false;
+        self.refreshButton.firstChild.classList.remove("wh-spin");
         self.schedule(self.instance.refresh_rate * 1000);
       });
+  };
+
+  WidgetView.prototype.updateMeta = function () {
+    if (!this.fetchedAt) return;
+    var seconds = Math.max(0, (Date.now() - this.fetchedAt) / 1000);
+    this.meta.textContent = "Updated " + relativeTime(seconds);
+    this.meta.title = new Date(this.fetchedAt).toLocaleString();
   };
 
   WidgetView.prototype.render = function (data) {
@@ -615,22 +709,29 @@
     var editing = Boolean(widget);
     var dialog = el("dialog", { className: "wh-dialog", "aria-labelledby": "wh-dialog-title" });
     var form = el("form", { method: "dialog", novalidate: true });
-    var formError = el("p", { className: "wh-field-error", role: "alert", hidden: true });
+    var formError = el("p", { className: "wh-form-error", role: "alert", hidden: true });
     var fieldsBox = el("div");
     var heading = el("h3", {
       id: "wh-dialog-title",
-      text: editing ? "Settings of " + widget.label() : "Add a widget",
+      text: editing ? widget.label() : "Add a widget",
     });
-    form.appendChild(heading);
+    var close = iconButton("close", "Close");
+    form.appendChild(el("div", { className: "wh-dialog-header" }, [heading, close]));
     form.appendChild(formError);
 
     var picker = null;
     if (!editing) {
       picker = el("select", { id: "wh-pick", name: "__widget", required: true });
       picker.appendChild(el("option", { value: "", text: "Choose a widget…" }));
+      var groups = {};
       this.catalog.forEach(function (item, i) {
-        var text = item.service + " — " + (item.description || item.name);
-        picker.appendChild(el("option", { value: String(i), text: text }));
+        if (!groups[item.service]) {
+          groups[item.service] = el("optgroup", { label: item.service });
+          picker.appendChild(groups[item.service]);
+        }
+        groups[item.service].appendChild(
+          el("option", { value: String(i), text: item.description || item.name })
+        );
       });
       form.appendChild(
         el("div", { className: "wh-field" }, [
@@ -699,8 +800,10 @@
     this.dialog = dialog;
 
     var focusAfter = trigger; // where focus returns when the dialog closes
-    cancel.addEventListener("click", function () {
-      dialog.close();
+    [cancel, close].forEach(function (button) {
+      button.addEventListener("click", function () {
+        dialog.close();
+      });
     });
     dialog.addEventListener("close", function () {
       dialog.remove();
@@ -722,6 +825,7 @@
         refresh_rate: /^\d+$/.test(raw.__refresh_rate) ? parseInt(raw.__refresh_rate, 10) : raw.__refresh_rate,
       };
       submit.disabled = true;
+      submit.textContent = editing ? "Saving…" : "Adding…";
       var secret = raw.__secret ? String(raw.__secret) : "";
       var saveSecret = secret
         ? self.client.request(
@@ -742,6 +846,7 @@
         .then(function (instance) {
           if (editing) {
             widget.instance = instance;
+            widget.subtitleNode.textContent = widget.subtitle();
             widget.load();
             self.announce(widget.label() + " updated.");
           } else {
@@ -755,6 +860,7 @@
         })
         .catch(function (error) {
           submit.disabled = false;
+          submit.textContent = editing ? "Save" : "Add";
           showErrors(form, formError, error);
         });
     });
@@ -796,12 +902,19 @@
       "data-wh-error-for": field.name,
       hidden: true,
     });
-    input.setAttribute("aria-describedby", errorId);
+    var helpId = id + "-help";
+    input.setAttribute("aria-describedby", (field.help ? helpId + " " : "") + errorId);
     var children = [];
-    var label = el("label", { for: id, text: field.label + (field.required ? " *" : "") });
+    var label = el("label", { for: id, text: field.label });
+    if (field.required) {
+      label.appendChild(document.createTextNode(" "));
+      label.appendChild(el("span", { className: "wh-required", "aria-hidden": "true", text: "*" }));
+    }
     if (field.input === "checkbox") children.push(input, label);
     else children.push(label, input);
-    if (field.help) children.push(el("span", { className: "wh-field-help", text: field.help }));
+    if (field.help) {
+      children.push(el("span", { className: "wh-field-help", id: helpId, text: field.help }));
+    }
     children.push(error);
     return el(
       "div",
@@ -863,8 +976,9 @@
         unplaced.push(key === "__all__" ? value : key + ": " + value);
       }
     });
-    showFormError(formError, unplaced.length ? unplaced.join(" ") : error.message);
     var invalid = form.querySelector("[aria-invalid]");
+    if (unplaced.length) showFormError(formError, unplaced.join(" "));
+    else showFormError(formError, invalid ? "Check the highlighted fields." : error.message);
     if (invalid) invalid.focus();
   }
 
@@ -879,6 +993,8 @@
       moveBy: moveBy,
       resizeBy: resizeBy,
       gridStyle: gridStyle,
+      relativeTime: relativeTime,
+      summarizeParams: summarizeParams,
       overlaps: overlaps,
       firstFreeSlot: firstFreeSlot,
       fieldsFromSchema: fieldsFromSchema,

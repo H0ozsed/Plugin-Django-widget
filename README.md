@@ -327,13 +327,16 @@ Ninja and DRF answer with their own bodies when *their* authenticators reject a 
 ```
 
 The tag renders the logged-in user's dashboard through the session API in `widget_hub.urls`: a
-12-column grid, drag to move (⠿ handle) or resize (corner), and the keyboard equivalent (focus the
-handle; arrow keys move, Shift + arrows resize, announced to screen readers). "Add widget" and ⚙
-open a form generated from the param schema, with server errors next to each field and a password
-field for widgets using a credential. Each widget refreshes at its own rate, timers pause while the
-tab is hidden, and a failing widget shows its error in its own frame, keeps its last data and
-retries at the next refresh without affecting the others. Placements that would overlap are
-refused.
+12-column grid, drag to move (grip handle) or resize (corner), and the keyboard equivalent (focus
+the handle; arrow keys move, Shift + arrows resize, announced to screen readers). "Add widget" and
+the settings button open a form generated from the param schema (widgets grouped by service), with
+server errors next to each field and a password field for widgets using a credential. Each widget
+shows a loading placeholder, a subtitle summarising its params (to tell two RSS widgets apart) and
+"Updated 2 min ago"; it refreshes at its own rate and timers pause while the tab is hidden. A
+failing widget shows its error in its own frame, keeps its last data, retries at the next refresh
+and offers "Try again", without affecting the others. Placements that would overlap are refused;
+on small screens widgets stack in reading order. Touch targets grow to 44 px on touch devices and
+animations respect `prefers-reduced-motion`.
 
 Data is rendered generically through `textContent` (objects as definition lists, arrays as lists,
 http(s) URLs as links or images). Custom rendering per widget:

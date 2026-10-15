@@ -63,8 +63,7 @@ def test_unexpected_failures_are_generic_503_logged_and_cached(mode, caplog):
         assert body == {
             "error": {
                 "code": "unavailable",
-                "message": "This widget is temporarily unavailable. "
-                "It will retry at the next refresh.",
+                "message": "This widget is temporarily unavailable.",
             }
         }
         assert "s3cr3t" not in str(body)

@@ -8,9 +8,9 @@ const { _internals: h } = require(
 );
 
 test("normalizePosition fills gaps and flows new widgets left to right", () => {
-  assert.deepEqual(h.normalizePosition({}, 0), { x: 0, y: 0, w: 4, h: 2 });
-  assert.deepEqual(h.normalizePosition(undefined, 2), { x: 8, y: 0, w: 4, h: 2 });
-  assert.deepEqual(h.normalizePosition({}, 3), { x: 0, y: 2, w: 4, h: 2 });
+  assert.deepEqual(h.normalizePosition({}, 0), { x: 0, y: 0, w: 4, h: 3 });
+  assert.deepEqual(h.normalizePosition(undefined, 2), { x: 8, y: 0, w: 4, h: 3 });
+  assert.deepEqual(h.normalizePosition({}, 3), { x: 0, y: 3, w: 4, h: 3 });
   assert.deepEqual(h.normalizePosition({ x: 11, y: 1, w: 6, h: 3 }, 0), { x: 6, y: 1, w: 6, h: 3 });
   assert.deepEqual(h.normalizePosition({ w: 99, h: 0 }, 0), { x: 0, y: 0, w: 12, h: 1 });
 });
@@ -53,6 +53,7 @@ test("gridStyle maps positions to CSS grid lines", () => {
   assert.deepEqual(h.gridStyle({ x: 2, y: 1, w: 3, h: 2 }), {
     gridColumn: "3 / span 3",
     gridRow: "2 / span 2",
+    order: "14",
   });
 });
 
@@ -95,6 +96,28 @@ test("paramsFromForm converts types and omits empty optional values", () => {
     h.paramsFromForm(params, { city: "Paris", days: "7", metric: false, note: "  ", odd: "1.5" }),
     { city: "Paris", days: 7, metric: false, odd: "1.5" }
   );
+});
+
+test("relativeTime gives short, human labels", () => {
+  assert.equal(h.relativeTime(5), "just now");
+  assert.equal(h.relativeTime(90), "2 min ago");
+  assert.equal(h.relativeTime(3 * 3600), "3 h ago");
+  assert.equal(h.relativeTime(86400), "1 day ago");
+  assert.equal(h.relativeTime(3 * 86400), "3 days ago");
+});
+
+test("summarizeParams shows text params and URL hosts only", () => {
+  const params = [
+    { name: "feed", type: "url" },
+    { name: "count", type: "integer" },
+    { name: "unit", type: "choice" },
+    { name: "city", type: "string" },
+  ];
+  assert.equal(
+    h.summarizeParams(params, { feed: "https://www.djangoproject.com/rss/", count: 5, unit: "c", city: "" }),
+    "www.djangoproject.com · c"
+  );
+  assert.equal(h.summarizeParams(params, {}), "");
 });
 
 test("only http(s) URLs become links or images", () => {

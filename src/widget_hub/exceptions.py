@@ -56,7 +56,7 @@ class WidgetError(Exception):
 class WidgetUnavailable(Exception):
     """A ``fetch()`` crashed or timed out. The details are logged, never sent (HTTP 503)."""
 
-    message = "This widget is temporarily unavailable. It will retry at the next refresh."
+    message = "This widget is temporarily unavailable."
     status = 503
 
     def __init__(self) -> None:

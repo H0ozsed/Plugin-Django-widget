@@ -169,6 +169,11 @@ Each entry: problem → options → choice → why → impact.
   error contract; `widget_hub.api.handle` runs Django's CSRF check on every unsafe request. Server
   data is inserted with `textContent` and only `http(s)` URLs become links or images. Overlapping
   placements are refused rather than pushing other widgets around, which keeps the logic small.
+- **Design pass:** reviewed with screenshots in light, dark, loading, dialog and 390 px states.
+  Icons are 24×24 stroke shapes drawn in the file (no icon font, no third-party set, so no
+  licence to track); colours, spacing and shadows are `--wh-*` tokens a project can override.
+  The review found a real bug: stacked on small screens, widgets kept their grid rows and
+  covered each other; the script now sets `order` from the position and small screens reset rows.
 
 ## D15. Release pipeline
 

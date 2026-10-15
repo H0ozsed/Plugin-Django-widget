@@ -13,9 +13,13 @@
   {% if authenticated %}
     {% csrf_token %}
     <p class="wh-sr-only" aria-live="polite" data-wh-live></p>
-    <p class="wh-help" id="wh-move-help">Focus a widget's move handle, then use the arrow keys to move it and Shift + arrow keys to resize it.</p>
+    <p class="wh-sr-only" id="wh-move-help">Use the arrow keys to move this widget, Shift and the arrow keys to resize it.</p>
     <div class="wh-grid" role="list" data-wh-grid></div>
-    <p class="wh-empty" data-wh-empty hidden>No widget yet. Use “Add widget” to create one.</p>
+    <div class="wh-empty-state" data-wh-empty hidden>
+      <p class="wh-empty-title">Your dashboard is empty</p>
+      <p>Add a widget to see weather, feeds or anything your project provides.</p>
+      <button type="button" class="wh-button wh-button-primary" data-wh-add>Add your first widget</button>
+    </div>
     <noscript><p class="wh-empty">The dashboard needs JavaScript.</p></noscript>
   {% else %}
     <p class="wh-empty">Log in to see your dashboard.</p>

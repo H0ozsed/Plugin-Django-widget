@@ -56,6 +56,21 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Packaging: CI job installing the built wheel in a fresh virtualenv and running the example
   against it; `Release` workflow publishing tags to TestPyPI through trusted publishing.
 
+### Changed
+
+- Built-in front design pass: consistent SVG icons, ghost icon buttons with hover/active states,
+  loading placeholders, params summary under each title, relative "Updated … ago" times, error
+  cards with "Try again", empty state with a call to action, dialog with a close button and
+  widgets grouped by service, spacing and shadow tokens, 44 px touch targets, reduced-motion
+  support. New widgets default to 3 rows so their content fits.
+- The generic 503 message is now "This widget is temporarily unavailable." (the server no longer
+  promises client behaviour; the front says it retries).
+
+### Fixed
+
+- On small screens, widgets kept their grid rows while stacked in one column and covered each
+  other (only 2 of 4 widgets were visible); they now stack in reading order.
+
 ### Performance
 
 - Concurrent cache misses on the same widget and params are coalesced ("single flight"):
