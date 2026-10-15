@@ -116,13 +116,28 @@ def is_public_address(address: str) -> bool:
     return _is_public_ip(ip)
 
 
-def resolve_public_address(host: str, port: int) -> str:
-    """Resolve ``host`` and return one address, refusing the host if any address is not public."""
-    try:
-        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-    except (socket.gaierror, UnicodeError):
-        raise SafeFetchError(f"Could not resolve {host}.", 502) from None
-    addresses = [info[4][0] for info in infos]
+def resolve_public_address(host: str, port: int, timeout: float | None = None) -> str:
+    """Resolve ``host`` and return one address, refusing the host if any address is not public.
+
+    ``getaddrinfo`` has no timeout of its own and a slow authoritative DNS server is under the
+    URL owner's control, so resolution runs in a daemon thread and is abandoned after ``timeout``.
+    """
+    outcome: dict[str, Any] = {}
+
+    def resolve() -> None:
+        try:
+            outcome["infos"] = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except (OSError, UnicodeError) as exc:
+            outcome["error"] = exc
+
+    resolver = threading.Thread(target=resolve, name="widget_hub_dns", daemon=True)
+    resolver.start()
+    resolver.join(timeout)
+    if resolver.is_alive():
+        raise SafeFetchError(f"Could not resolve {host} in time.", 504)
+    if "error" in outcome:
+        raise SafeFetchError(f"Could not resolve {host}.", 502)
+    addresses = [info[4][0] for info in outcome["infos"]]
     if not addresses or not all(is_public_address(a) for a in addresses):
         raise SafeFetchError("This URL points to a private or reserved address.", 400)
     return addresses[0]
@@ -197,10 +212,12 @@ def _request_once(
 ) -> tuple[int, dict[str, str], bytes]:
     host = parts.hostname
     port = parts.port or (443 if parts.scheme == "https" else 80)
+    if deadline - time.monotonic() <= 0:
+        raise SafeFetchError(f"{host} did not answer in time.", 504)
+    address = resolve_public_address(host, port, timeout=deadline - time.monotonic())
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise SafeFetchError(f"{host} did not answer in time.", 504)
-    address = resolve_public_address(host, port)
     if parts.scheme == "https":
         conn: http.client.HTTPConnection = _PinnedHTTPSConnection(
             host, port, address, remaining, ssl.create_default_context()

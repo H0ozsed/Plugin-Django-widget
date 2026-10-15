@@ -314,3 +314,60 @@ def test_https_connects_to_the_validated_address_with_sni(monkeypatch):
     with pytest.raises(OSError, match="stop here"):
         conn.connect()
     assert calls == {"address": (PUBLIC_IP, 443), "sni": "api.example.com"}
+
+
+def test_slow_dns_does_not_extend_the_deadline(monkeypatch):
+    """Regression: getaddrinfo has no timeout; an attacker's slow DNS must not hold the call."""
+    release = threading.Event()
+
+    def slow_getaddrinfo(*args, **kwargs):
+        release.wait(3)
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (PUBLIC_IP, 80))]
+
+    monkeypatch.setattr(security.socket, "getaddrinfo", slow_getaddrinfo)
+    started = time.monotonic()
+    with pytest.raises(SafeFetchError, match=r"Could not resolve slow\.test in time") as info:
+        safe_fetch("http://slow.test/", timeout=0.2)
+    assert info.value.status == 504
+    assert time.monotonic() - started < 1.0
+    release.set()
+
+
+def test_tls_handshake_drip_does_not_extend_the_deadline(monkeypatch):
+    """A server trickling a TLS record is cut off at the deadline (CPython applies the socket
+    timeout to the whole handshake; this guards that assumption)."""
+    listener = socket.create_server(("127.0.0.1", 0))
+    port = listener.getsockname()[1]
+    stop = threading.Event()
+
+    def serve():
+        conn, _ = listener.accept()
+        with conn:
+            conn.sendall(b"\x16\x03\x03\x40\x00")  # handshake record header announcing 16 KiB
+            while not stop.is_set():
+                try:
+                    conn.sendall(b"\x00")
+                except OSError:
+                    return
+                time.sleep(0.05)
+
+    threading.Thread(target=serve, daemon=True).start()
+    real_create_connection = socket.create_connection
+    monkeypatch.setattr(
+        security.socket,
+        "getaddrinfo",
+        lambda *a, **k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (PUBLIC_IP, port))],
+    )
+    monkeypatch.setattr(
+        security.socket,
+        "create_connection",
+        lambda address, timeout=None: real_create_connection(("127.0.0.1", address[1]), timeout),
+    )
+    started = time.monotonic()
+    try:
+        with pytest.raises(SafeFetchError, match="did not answer in time"):
+            safe_fetch(f"https://public.test:{port}/", timeout=0.3)
+        assert time.monotonic() - started < 1.0
+    finally:
+        stop.set()
+        listener.close()

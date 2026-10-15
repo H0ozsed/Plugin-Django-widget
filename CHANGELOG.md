@@ -52,3 +52,5 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   special ranges are rejected explicitly on every Python version; caller headers (not only
   `Authorization`) are dropped on any cross-origin redirect, including https→http on the same
   host; the deadline is enforced by a watchdog so a server trickling bytes cannot hold the call.
+- `safe_fetch()` DNS resolution is bounded by the remaining deadline: `getaddrinfo` has no timeout
+  and a slow authoritative DNS server, chosen by whoever controls the URL, extended every hop.

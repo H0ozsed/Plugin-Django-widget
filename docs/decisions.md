@@ -119,8 +119,11 @@ Each entry: problem → options → choice → why → impact.
   absolute deadline (keeping its own socket reference, since `http.client` forgets it for
   `Connection: close` responses); (3) NAT64/6to4/Teredo addresses could encapsulate private IPv4
   → embedded IPv4 must be public too, and special ranges are rejected explicitly because
-  `is_global` changed across Python versions. DNS resolution itself has no timeout of its own; the
-  `FETCH_TIMEOUT` around `fetch()` still bounds the request.
+  `is_global` changed across Python versions. A further review pointed out that DNS resolution
+  had no deadline (a slow authoritative server is under the URL owner's control): it now runs in
+  a daemon thread joined with the remaining time. The TLS handshake was also suspected; a test
+  trickling a TLS record shows CPython already applies the socket timeout to the whole handshake,
+  so no change was made there beyond keeping that test as a guard.
 
 ## D13. Credential encryption and exposure to widgets
 
