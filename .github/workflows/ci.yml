@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  test:
+    name: py${{ matrix.python }} / Django ${{ matrix.django }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Supported Django series and the Python versions each one supports
+        # (https://docs.djangoproject.com/en/dev/faq/install/).
+        include:
+          - { django: "5.2", python: "3.10" }
+          - { django: "5.2", python: "3.11" }
+          - { django: "5.2", python: "3.12" }
+          - { django: "5.2", python: "3.13" }
+          - { django: "5.2", python: "3.14" }
+          - { django: "6.0", python: "3.12" }
+          - { django: "6.0", python: "3.13" }
+          - { django: "6.0", python: "3.14" }
+          - { django: "6.1", python: "3.12" }
+          - { django: "6.1", python: "3.13" }
+          - { django: "6.1", python: "3.14" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          allow-prereleases: true
+      - run: pip install -e ".[dev]" "Django~=${{ matrix.django }}.0"
+      - run: pytest --cov=widget_hub --cov-report=term-missing
+      - name: Example project starts
+        working-directory: example
+        env:
+          PYTHONPATH: .
+        run: |
+          python manage.py check
+          python manage.py migrate --noinput

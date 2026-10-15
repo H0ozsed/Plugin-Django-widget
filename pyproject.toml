@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "django-widget-hub"
+dynamic = ["version"]
+description = "Declare dashboard widgets once in Python; get validation, caching, owner-scoped CRUD, /about.json and a front for free."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Hoowsed" }]
+keywords = ["django", "dashboard", "widgets", "plugin"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = ["Django>=5.2"]
+
+[project.optional-dependencies]
+ninja = ["django-ninja>=1.3"]
+drf = ["djangorestframework>=3.15"]
+dev = [
+    "django-ninja>=1.3",
+    "djangorestframework>=3.15",
+    "pytest>=8",
+    "pytest-django>=4.9",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "build>=1.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/H0ozsed/Plugin-Django-widget"
+Issues = "https://github.com/H0ozsed/Plugin-Django-widget/issues"
+Changelog = "https://github.com/H0ozsed/Plugin-Django-widget/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/widget_hub/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/widget_hub"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/widget_hub", "tests", "LICENSE", "README.md", "CHANGELOG.md"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["**/migrations/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "S", "SIM", "RUF"]
+ignore = ["RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"example/**" = ["S105"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["widget_hub"]
