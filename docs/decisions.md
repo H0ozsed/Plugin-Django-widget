@@ -29,3 +29,24 @@ Each entry: problem → options → choice → why → impact.
 - **Choice:** Django 5.2 LTS, 6.0, 6.1 (djangoproject.com/download on 2026-10-15); Python 3.10–3.14
   following the official FAQ table (5.2: 3.10–3.14, 6.0/6.1: 3.12–3.14).
 - **Impact:** CI runs 11 combinations; `requires-python = ">=3.10"`, `Django>=5.2`.
+
+## D4. How a widget declares its parameters
+
+- **Problem:** parameter order matters (forms, `/about.json`) and parameter names must not clash
+  with the widget's own attributes (`name`, `description` are common parameter names).
+- **Options:** (a) class attributes `city = String()`; (b) an explicit list
+  `params = [String("city")]`.
+- **Choice:** (b).
+- **Why:** order is explicit, no metaclass, and a parameter called `name` cannot shadow the
+  widget name.
+- **Impact:** the parameter name is repeated as a string; typos surface at registration time
+  because names are validated.
+
+## D5. Duplicate names fail at startup
+
+- **Problem:** in the Epitech dashboard two services sharing a name silently hid widgets.
+- **Choice:** `register()` raises `ImproperlyConfigured` with both origins; registries hold one
+  `Service` object per name, so reusing a name from another `Service` instance is an error too.
+  `widgets.py` modules are imported in `AppConfig.ready()` so the error happens at startup, not on
+  first request.
+- **Impact:** a misconfigured project does not start; tests can build isolated `WidgetRegistry()`.

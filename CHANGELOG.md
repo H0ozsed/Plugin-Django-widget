@@ -10,3 +10,6 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Project skeleton: src layout, `widget_hub` app config, pytest-django test suite, demo project
   under `example/`, CI on Django 5.2 / 6.0 / 6.1 with every Python version each one supports.
+- Declaration API: `Service`, `Widget`, typed params (`String`, `Integer`, `Boolean`, `Choice`,
+  `Url`), `@register`, and a registry that refuses duplicate service or widget names at startup.
+  `<app>/widgets.py` modules are autodiscovered.
