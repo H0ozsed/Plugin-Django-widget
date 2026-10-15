@@ -4,6 +4,7 @@ import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 import pytest
 from django.test import override_settings
@@ -57,6 +58,26 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/to-other":
             port = self.server.server_address[1]
             self._send(302, headers=[("Location", f"http://other.test:{port}/echo-auth")])
+        elif path == "/echo-headers":
+            names = ("Authorization", "X-Api-Key", "Cookie")
+            self._send(200, json.dumps({n: self.headers.get(n) for n in names}).encode())
+        elif path == "/to-other-headers":
+            port = self.server.server_address[1]
+            self._send(302, headers=[("Location", f"http://other.test:{port}/echo-headers")])
+        elif path == "/drip-body":
+            self.send_response(200)
+            self.end_headers()
+            for _ in range(40):  # one byte every 50 ms: each recv() is well under the timeout
+                self.wfile.write(b"x")
+                self.wfile.flush()
+                time.sleep(0.05)
+        elif path == "/drip-headers":
+            self.wfile.write(b"HTTP/1.1 200 OK\r\n")
+            for _ in range(40):
+                self.wfile.write(b"X-Slow: 1\r\n")
+                self.wfile.flush()
+                time.sleep(0.05)
+            self.wfile.write(b"\r\n")
         elif path == "/loop":
             self._send(302, headers=[("Location", "/loop")])
         elif path == "/not-json":
@@ -116,6 +137,11 @@ def server(monkeypatch):
         ("fc00::1", False),
         ("::ffff:127.0.0.1", False),
         ("::ffff:8.8.8.8", True),
+        ("64:ff9b::7f00:1", False),  # NAT64 for 127.0.0.1
+        ("64:ff9b::a9fe:a9fe", False),  # NAT64 for 169.254.169.254
+        ("2002:7f00:1::", False),  # 6to4 for 127.0.0.1
+        ("2002:a00:1::", False),  # 6to4 for 10.0.0.1
+        ("2001:0:4136:e378:8000:63bf:3fff:fdd2", False),  # Teredo
     ],
 )
 def test_is_public_address(address, public):
@@ -188,6 +214,46 @@ def test_authorization_is_dropped_on_cross_host_redirect(server):
     assert same.text == "Bearer t"
     other = safe_fetch(f"{base}/to-other", headers={"Authorization": "Bearer t"})
     assert other.text == "none"
+
+
+def test_caller_headers_are_dropped_on_cross_origin_redirect(server):
+    """Regression: API keys and cookies must not follow a redirect to another origin."""
+    base, _ = server
+    secrets = {"Authorization": "Bearer t", "X-Api-Key": "k", "Cookie": "s=1"}
+    assert safe_fetch(f"{base}/echo-headers", headers=secrets).json() == {
+        "Authorization": "Bearer t",
+        "X-Api-Key": "k",
+        "Cookie": "s=1",
+    }
+    assert safe_fetch(f"{base}/to-other-headers", headers=secrets).json() == {
+        "Authorization": None,
+        "X-Api-Key": None,
+        "Cookie": None,
+    }
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "same"),
+    [
+        ("https://a.test/x", "https://A.test:443/y", True),
+        ("https://a.test/", "http://a.test/", False),  # scheme downgrade
+        ("https://a.test/", "https://a.test:8443/", False),
+        ("https://a.test/", "https://b.test/", False),
+    ],
+)
+def test_origin(first, second, same):
+    assert (security.origin(urlsplit(first)) == security.origin(urlsplit(second))) is same
+
+
+@pytest.mark.parametrize("path", ["/drip-body", "/drip-headers"])
+def test_deadline_is_absolute_against_slow_drip(server, path):
+    """Regression: a server trickling bytes must not keep the call alive past the deadline."""
+    base, _ = server
+    started = time.monotonic()
+    with pytest.raises(SafeFetchError, match="did not answer in time") as info:
+        safe_fetch(f"{base}{path}", timeout=0.3)
+    assert info.value.status == 504
+    assert time.monotonic() - started < 1.0
 
 
 @pytest.mark.parametrize("path", ["/big", "/big-declared"])

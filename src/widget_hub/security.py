@@ -17,11 +17,13 @@ message is safe to show, so a widget can let it propagate.
 
 from __future__ import annotations
 
+import contextlib
 import http.client
 import ipaddress
 import json
 import socket
 import ssl
+import threading
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -74,12 +76,44 @@ class SafeResponse:
             raise SafeFetchError("The server did not return valid JSON.", 502) from None
 
 
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
+def _embedded_ipv4(ip: ipaddress.IPv6Address) -> list[ipaddress.IPv4Address]:
+    """IPv4 addresses a 6to4, Teredo or NAT64 address carries, which a gateway may route to."""
+    embedded: list[ipaddress.IPv4Address] = []
+    if ip.sixtofour is not None:
+        embedded.append(ip.sixtofour)
+    if ip.teredo is not None:
+        embedded.extend(ip.teredo)
+    if ip in _NAT64:
+        embedded.append(ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF))
+    return embedded
+
+
+def _is_public_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    # is_global alone differs between Python versions: also reject every special range explicitly.
+    special = (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+    return ip.is_global and not special
+
+
 def is_public_address(address: str) -> bool:
-    """True if ``address`` is a globally routable unicast IP address."""
+    """True if ``address`` is a globally routable unicast IP address and, for IPv6, every IPv4
+    address embedded in it (IPv4-mapped, 6to4, Teredo, NAT64) is public as well."""
     ip = ipaddress.ip_address(address.split("%", 1)[0])
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
-        ip = ip.ipv4_mapped
-    return ip.is_global and not ip.is_multicast
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            return _is_public_ip(ip.ipv4_mapped)
+        if not all(_is_public_ip(v4) for v4 in _embedded_ipv4(ip)):
+            return False
+    return _is_public_ip(ip)
 
 
 def resolve_public_address(host: str, port: int) -> str:
@@ -106,7 +140,8 @@ def safe_fetch(
     """GET ``url`` with SSRF protection, a timeout and a size limit.
 
     :param params: query-string parameters appended to ``url``.
-    :param headers: extra request headers. ``Authorization`` is dropped on cross-host redirects.
+    :param headers: extra request headers (API keys...). They are sent to the original origin
+        only: a redirect to another scheme, host or port drops all of them.
     :param timeout: overall deadline in seconds (default ``SAFE_FETCH_TIMEOUT``).
     :param max_bytes: largest accepted body (default ``SAFE_FETCH_MAX_BYTES``).
     :param max_redirects: redirects followed (default ``SAFE_FETCH_MAX_REDIRECTS``).
@@ -118,16 +153,15 @@ def safe_fetch(
     deadline = time.monotonic() + timeout
     if params:
         url = f"{url}{'&' if urlsplit(url).query else '?'}{urlencode(params, doseq=True)}"
-    request_headers = {"User-Agent": f"django-widget-hub/{__version__}", "Accept": "*/*"}
-    request_headers.update(headers or {})
-    origin_host = None
+    default_headers = {"User-Agent": f"django-widget-hub/{__version__}", "Accept": "*/*"}
+    request_headers = {**default_headers, **(headers or {})}
+    first_origin = None
     for _ in range(max_redirects + 1):
         parts = _check_url(url)
-        if origin_host is not None and parts.hostname != origin_host:
-            request_headers = {
-                k: v for k, v in request_headers.items() if k.lower() != "authorization"
-            }
-        origin_host = parts.hostname
+        if first_origin is None:
+            first_origin = origin(parts)
+        elif origin(parts) != first_origin:
+            request_headers = dict(default_headers)  # never forward caller headers elsewhere
         status, response_headers, body = _request_once(parts, request_headers, deadline, max_bytes)
         location = response_headers.get("location")
         if status in REDIRECT_STATUSES and location:
@@ -135,6 +169,12 @@ def safe_fetch(
             continue
         return SafeResponse(status, response_headers, body, url)
     raise SafeFetchError("Too many redirects.", 502)
+
+
+def origin(parts: Any) -> tuple[str, str, int]:
+    """The ``(scheme, host, port)`` origin of a split URL, with the default port filled in."""
+    scheme = parts.scheme.lower()
+    return scheme, (parts.hostname or "").lower(), parts.port or (443 if scheme == "https" else 80)
 
 
 def _check_url(url: str) -> Any:
@@ -170,35 +210,55 @@ def _request_once(
     path = parts.path or "/"
     if parts.query:
         path = f"{path}?{parts.query}"
+    too_late = SafeFetchError(f"{host} did not answer in time.", 504)
+    # Socket timeouts apply to each recv(): a server sending one byte at a time would never
+    # trigger them. The watchdog shuts the socket down at the absolute deadline instead.
+    expired = threading.Event()
+    sockets: list[socket.socket] = []
+    watchdog = threading.Timer(remaining, _expire, args=(sockets, expired))
+    watchdog.daemon = True
+    watchdog.start()
     try:
+        conn.connect()
+        # http.client drops conn.sock after getresponse() when the server will close the
+        # connection, while the body is still read from it: keep our own reference.
+        sockets.append(conn.sock)
         conn.request("GET", path, headers=dict(headers))
         response = conn.getresponse()
-        body = _read_limited(response, deadline, max_bytes, host)
+        body = _read_limited(response, max_bytes)
+        if expired.is_set():  # a shut-down socket reads as EOF: never return a truncated body
+            raise too_late
         response_headers = {k.lower(): v for k, v in response.getheaders()}
         return response.status, response_headers, body
     except SafeFetchError:
         raise
     except TimeoutError:
-        raise SafeFetchError(f"{host} did not answer in time.", 504) from None
-    except ssl.SSLError:
-        raise SafeFetchError(f"TLS error while connecting to {host}.", 502) from None
-    except (OSError, http.client.HTTPException):
+        raise too_late from None
+    except (OSError, http.client.HTTPException) as exc:
+        if expired.is_set():
+            raise too_late from None
+        if isinstance(exc, ssl.SSLError):
+            raise SafeFetchError(f"TLS error while connecting to {host}.", 502) from None
         raise SafeFetchError(f"Could not reach {host}.", 502) from None
     finally:
+        watchdog.cancel()
         conn.close()
 
 
-def _read_limited(
-    response: http.client.HTTPResponse, deadline: float, max_bytes: int, host: str
-) -> bytes:
+def _expire(sockets: list[socket.socket], expired: threading.Event) -> None:
+    expired.set()
+    for sock in sockets:
+        with contextlib.suppress(OSError):
+            sock.shutdown(socket.SHUT_RDWR)
+
+
+def _read_limited(response: http.client.HTTPResponse, max_bytes: int) -> bytes:
     length = response.getheader("content-length")
     if length and length.isdigit() and int(length) > max_bytes:
         raise SafeFetchError("The response is too large.", 502)
     chunks: list[bytes] = []
     received = 0
     while True:
-        if time.monotonic() > deadline:
-            raise SafeFetchError(f"{host} did not answer in time.", 504)
         chunk = response.read(min(65536, max_bytes + 1 - received))
         if not chunk:
             return b"".join(chunks)

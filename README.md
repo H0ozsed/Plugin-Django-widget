@@ -191,11 +191,12 @@ items = parse(response.text)  # .status, .headers, .content, .text, .json()
 ```
 
 It accepts only `http`/`https` URLs without embedded credentials, resolves the host and refuses it
-if *any* address is private, loopback, link-local (cloud metadata), CGNAT, multicast or reserved
-(IPv4-mapped IPv6 included), then connects to the address it checked, with the original host name
-for `Host`, SNI and certificate validation, so DNS rebinding cannot swap the target. Redirects are
-followed by hand and re-validated; `Authorization` is dropped when the host changes. Each call has
-a deadline and a body size limit. Failures raise `SafeFetchError`, a `WidgetError` with a safe
+if *any* address is private, loopback, link-local (cloud metadata), CGNAT, multicast or reserved,
+including IPv4 addresses embedded in IPv6 (mapped, NAT64, 6to4, Teredo). It then connects to the
+address it checked, with the original host name for `Host`, SNI and certificate validation, so DNS
+rebinding cannot swap the target. Redirects are followed by hand and re-validated; the headers you
+pass (API keys...) are dropped as soon as a redirect changes scheme, host or port. The deadline is
+absolute: a watchdog closes the socket even if the server trickles bytes. Bodies are size-limited. Failures raise `SafeFetchError`, a `WidgetError` with a safe
 message (400 refused URL, 502 network error, 504 timeout), so it can simply propagate.
 
 **Credentials.** A widget that needs a user's API token sets `uses_credential = True` (which

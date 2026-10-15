@@ -112,6 +112,15 @@ Each entry: problem → options → choice → why → impact.
   be public (an attacker controlling DNS could otherwise mix a public and a private answer).
 - **Impact:** GET only, no connection pooling, no automatic decompression: enough for widget
   feeds. Errors are `WidgetError`s with safe messages so widgets can let them propagate.
+- **Review follow-up:** a security review found three gaps, fixed with regression tests:
+  (1) only `Authorization` was dropped and only on host change → every caller header is now
+  dropped on any origin change (scheme, host, port); (2) socket timeouts are per `recv()`, so a
+  trickling server could exceed the deadline → a watchdog timer shuts the socket down at the
+  absolute deadline (keeping its own socket reference, since `http.client` forgets it for
+  `Connection: close` responses); (3) NAT64/6to4/Teredo addresses could encapsulate private IPv4
+  → embedded IPv4 must be public too, and special ranges are rejected explicitly because
+  `is_global` changed across Python versions. DNS resolution itself has no timeout of its own; the
+  `FETCH_TIMEOUT` around `fetch()` still bounds the request.
 
 ## D13. Credential encryption and exposure to widgets
 

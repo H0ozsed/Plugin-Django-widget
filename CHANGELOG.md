@@ -48,3 +48,7 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CSRF is also enforced when a framework authenticator accepted the request but the browser sent
   Django's session cookie: ninja authenticators that simply return `request.user` no longer
   bypass it. Only requests without the session cookie (token clients) skip the check.
+- `safe_fetch()` hardening: IPv4 addresses embedded in IPv6 (NAT64, 6to4, Teredo) must be public;
+  special ranges are rejected explicitly on every Python version; caller headers (not only
+  `Authorization`) are dropped on any cross-origin redirect, including https→http on the same
+  host; the deadline is enforced by a watchdog so a server trickling bytes cannot hold the call.
