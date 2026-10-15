@@ -6,6 +6,7 @@ from typing import Any
 
 from django.conf import settings
 from django.core.checks import Error, register
+from django.utils.module_loading import import_string
 
 from . import conf
 
@@ -47,6 +48,21 @@ def check_settings(app_configs: Any = None, **kwargs: Any) -> list[Error]:
                 id="widget_hub.E005",
             )
         )
+    for hook in ("OWNER_RESOLVER", "PERMISSION_CHECK"):
+        value = conf.get(hook)
+        if isinstance(value, str):
+            try:
+                import_string(value)
+            except ImportError as exc:
+                errors.append(
+                    Error(f"WIDGET_HUB {hook} cannot be imported: {exc}", id="widget_hub.E006")
+                )
+        elif value is not None and not callable(value):
+            errors.append(
+                Error(
+                    f"WIDGET_HUB {hook} must be a dotted path or a callable.", id="widget_hub.E006"
+                )
+            )
     if conf.get("CACHE_ALIAS") not in settings.CACHES:
         errors.append(
             Error(

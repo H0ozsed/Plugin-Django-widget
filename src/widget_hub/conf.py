@@ -25,6 +25,10 @@ DEFAULTS: dict[str, Any] = {
     "MAX_CONCURRENT_FETCHES": 32,
     # Use X-Forwarded-For for /about.json client.host. Only enable behind a proxy that sets it.
     "ABOUT_TRUST_X_FORWARDED_FOR": False,
+    # Dotted path or callable: request -> owner user or None. See widget_hub.auth.
+    "OWNER_RESOLVER": "widget_hub.auth.default_owner",
+    # Dotted path or callable: (request, owner, action) -> bool, or None to allow everything.
+    "PERMISSION_CHECK": None,
 }
 """Documented defaults; the README settings table mirrors this dict."""
 

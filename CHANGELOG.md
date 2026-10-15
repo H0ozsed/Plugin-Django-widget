@@ -28,3 +28,6 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   upstream cannot make the process accumulate threads.
 - Public `GET /about.json` (Epitech Dashboard format) generated from the registry, via
   `include("widget_hub.urls")`; `ABOUT_TRUST_X_FORWARDED_FOR` setting.
+- django-ninja adapter `widget_hub.contrib.ninja.build_router()`; shared HTTP operations in
+  `widget_hub.api`; swappable `OWNER_RESOLVER` and `PERMISSION_CHECK`; CSRF enforced for
+  cookie-authenticated unsafe requests reaching CSRF-exempt API views.

@@ -74,8 +74,14 @@ WIDGET_HUB = {
     "FETCH_TIMEOUT": 10.0,  # seconds a single fetch() may run
     "MAX_CONCURRENT_FETCHES": 32,  # running fetch() calls per process, timed-out ones included
     "ABOUT_TRUST_X_FORWARDED_FOR": False,  # /about.json client.host from X-Forwarded-For
+    "OWNER_RESOLVER": "widget_hub.auth.default_owner",  # request -> user or None
+    "PERMISSION_CHECK": None,  # (request, owner, action) -> bool; None allows everything
 }
 ```
+
+`OWNER_RESOLVER` and `PERMISSION_CHECK` accept a dotted path or a callable. The default owner is
+`request.auth` when an API framework set it to a user, otherwise `request.user`. `action` is one
+of `catalog`, `list`, `create`, `retrieve`, `update`, `delete`, `fetch`.
 
 ## Caching and rate limits
 
@@ -113,6 +119,35 @@ Every error response uses one shape:
 | `unavailable` | 503 | `fetch()` crashed, timed out, or the concurrency cap was reached |
 
 `details` only appears for `invalid_input`.
+
+## django-ninja adapter
+
+```bash
+pip install "django-widget-hub[ninja]"
+```
+
+```python
+from ninja import NinjaAPI
+from widget_hub.contrib.ninja import build_router
+
+api = NinjaAPI(auth=...)  # your authenticators; the router inherits them
+api.add_router("/widgets", build_router())
+```
+
+| Method | Path | Result |
+|---|---|---|
+| GET | `/widgets/catalog` | every widget's schema |
+| GET | `/widgets/instances` | the user's instances |
+| POST | `/widgets/instances` | create (`service`, `widget`, `params`, `refresh_rate`, `position`) → 201 |
+| GET | `/widgets/instances/{id}` | one instance (404 if it is someone else's) |
+| PATCH | `/widgets/instances/{id}` | update `params`, `refresh_rate`, `position` |
+| DELETE | `/widgets/instances/{id}` | 204 |
+| GET | `/widgets/instances/{id}/data` | `{"data": ..., "fetched_at": "...", "cached": bool}` |
+
+Bodies are validated by widget_hub (not pydantic) so errors follow the contract above. When the
+API has no authenticator and the user comes from the session cookie, unsafe methods require a
+valid CSRF token; requests authenticated by a ninja authenticator are left to it. Note: when
+your own ninja authenticator rejects a request, ninja answers with its own 401 body.
 
 ## The `/about.json` endpoint
 

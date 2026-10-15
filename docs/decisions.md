@@ -109,3 +109,18 @@ Each entry: problem → options → choice → why → impact.
   the richer `type_name` stays in `Widget.schema()`.
 - **Impact:** the Epitech migration sets the flag (it runs behind nginx) to keep identical output.
   Service descriptions are not emitted, to match the format exactly.
+
+## D11. Adapters parse bodies themselves and enforce CSRF for session users
+
+- **Problem:** ninja validates bodies with pydantic (422, its own shape) and marks views
+  `csrf_exempt`; an API without authenticator that relies on `request.user` would accept
+  cross-site POSTs.
+- **Options:** (a) pydantic schemas + exception handlers installed on the user's `NinjaAPI`;
+  (b) adapters read the raw JSON and call `widget_hub.api`, which owns validation and CSRF.
+- **Choice:** (b).
+- **Why:** a router cannot install API-wide exception handlers without touching the user's API,
+  and one validation path keeps every adapter's errors identical. OpenAPI still documents the
+  body through `openapi_extra`.
+- **Impact:** `widget_hub.api.handle()` applies `CsrfViewMiddleware` when the owner comes from the
+  session cookie and the method is unsafe; requests authenticated by the framework (`request.auth`
+  is a user) are left to that authenticator, as DRF and ninja already do.

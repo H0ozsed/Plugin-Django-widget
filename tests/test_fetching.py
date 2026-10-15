@@ -208,6 +208,18 @@ class TestChecks:
     def test_bad_timeout(self):
         assert self.ids() == ["widget_hub.E003"]
 
+    @override_settings(WIDGET_HUB={"OWNER_RESOLVER": "no.such.function"})
+    def test_unimportable_hook(self):
+        assert self.ids() == ["widget_hub.E006"]
+
+    @override_settings(WIDGET_HUB={"PERMISSION_CHECK": 42})
+    def test_non_callable_hook(self):
+        assert self.ids() == ["widget_hub.E006"]
+
+    @override_settings(WIDGET_HUB={"MAX_CONCURRENT_FETCHES": 0})
+    def test_bad_concurrency_cap(self):
+        assert self.ids() == ["widget_hub.E005"]
+
     @override_settings(WIDGET_HUB={"CACHE_ALIAS": "nope"})
     def test_unknown_cache_alias(self):
         assert self.ids() == ["widget_hub.E004"]

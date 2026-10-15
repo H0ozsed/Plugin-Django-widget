@@ -3,7 +3,7 @@
 Live checklist for `django-widget-hub` (import `widget_hub`, setting `WIDGET_HUB`).
 After a session restart, read this first and resume from the first unchecked step.
 
-**Current step:** 9 — django-ninja adapter
+**Current step:** 10 — DRF adapter
 
 ## Plan (one feature = one commit = one push)
 
@@ -15,7 +15,7 @@ After a session restart, read this first and resume from the first unchecked ste
 - [x] 6. Caching and rate limiting (Django cache, per-call timeout, minimum refresh rate)
 - [x] 7. Error contract (`WidgetError(message, status)`, generic 503, documented JSON shape)
 - [x] 8. `/about.json` discovery endpoint (Epitech format)
-- [ ] 9. django-ninja adapter
+- [x] 9. django-ninja adapter
 - [ ] 10. DRF adapter
 - [ ] 11. Security helpers: `safe_fetch()` (SSRF) and encrypted credential store (Fernet)
 - [ ] 12. Built-in front: `{% dashboard %}`, JS grid/drag/resize/settings/refresh, CSS light/dark
