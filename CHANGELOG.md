@@ -26,3 +26,5 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only in logs, cached failures, one JSON error shape (`widget_hub.errors`).
 - `MAX_CONCURRENT_FETCHES` caps running `fetch()` calls, timed-out ones included, so a slow
   upstream cannot make the process accumulate threads.
+- Public `GET /about.json` (Epitech Dashboard format) generated from the registry, via
+  `include("widget_hub.urls")`; `ABOUT_TRUST_X_FORWARDED_FOR` setting.

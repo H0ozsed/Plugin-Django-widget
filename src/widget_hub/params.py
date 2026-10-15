@@ -59,7 +59,10 @@ class Param:
     """
 
     type_name: ClassVar[str] = ""
-    """Type identifier exposed in ``/about.json`` and the JSON schema."""
+    """Type identifier exposed in the JSON schema (:meth:`to_schema`)."""
+
+    about_type: ClassVar[str] = "string"
+    """Type exposed in ``/about.json``, limited to the Epitech format's types."""
 
     def __init__(
         self,
@@ -163,6 +166,7 @@ class Integer(Param):
     """A whole number, optionally bounded. Decimal strings such as ``"42"`` are accepted."""
 
     type_name = "integer"
+    about_type = "integer"
 
     def __init__(
         self,
@@ -203,6 +207,7 @@ class Boolean(Param):
     """A true/false flag. Accepts booleans and the strings true/false/1/0/yes/no/on/off."""
 
     type_name = "boolean"
+    about_type = "boolean"
 
     _TRUE = frozenset({"true", "1", "yes", "on"})
     _FALSE = frozenset({"false", "0", "no", "off"})

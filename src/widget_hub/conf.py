@@ -23,6 +23,8 @@ DEFAULTS: dict[str, Any] = {
     "FETCH_TIMEOUT": 10.0,
     # Process-wide cap on running fetch() calls (timed-out ones count until they return).
     "MAX_CONCURRENT_FETCHES": 32,
+    # Use X-Forwarded-For for /about.json client.host. Only enable behind a proxy that sets it.
+    "ABOUT_TRUST_X_FORWARDED_FOR": False,
 }
 """Documented defaults; the README settings table mirrors this dict."""
 

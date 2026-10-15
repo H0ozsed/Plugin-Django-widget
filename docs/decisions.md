@@ -99,3 +99,13 @@ Each entry: problem → options → choice → why → impact.
 - **Why:** widget authors decide what is safe to show; mistakes default to silence.
 - **Impact:** one JSON shape `{"error": {"code", "message", "details"?}}` for every adapter.
   Failures are cached for the refresh period so a failing upstream is not retried in a loop.
+
+## D10. `/about.json` client host and param types
+
+- **Problem:** the Epitech code trusted `X-Forwarded-For` unconditionally (spoofable when no proxy
+  overwrites it), and the format only knows a few param types.
+- **Choice:** `REMOTE_ADDR` by default, `ABOUT_TRUST_X_FORWARDED_FOR` opt-in; each param class
+  carries an `about_type` (`Integer` → `integer`, `Boolean` → `boolean`, others → `string`) while
+  the richer `type_name` stays in `Widget.schema()`.
+- **Impact:** the Epitech migration sets the flag (it runs behind nginx) to keep identical output.
+  Service descriptions are not emitted, to match the format exactly.

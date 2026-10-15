@@ -73,6 +73,7 @@ WIDGET_HUB = {
     "MAX_REFRESH_RATE": 86400,  # seconds; higher refresh rates are rejected
     "FETCH_TIMEOUT": 10.0,  # seconds a single fetch() may run
     "MAX_CONCURRENT_FETCHES": 32,  # running fetch() calls per process, timed-out ones included
+    "ABOUT_TRUST_X_FORWARDED_FOR": False,  # /about.json client.host from X-Forwarded-For
 }
 ```
 
@@ -112,6 +113,27 @@ Every error response uses one shape:
 | `unavailable` | 503 | `fetch()` crashed, timed out, or the concurrency cap was reached |
 
 `details` only appears for `invalid_input`.
+
+## The `/about.json` endpoint
+
+`path("", include("widget_hub.urls"))` publishes a public `GET /about.json` in the Epitech
+Dashboard format, generated from the registry, so it can never disagree with the widgets that
+actually exist:
+
+```json
+{"client": {"host": "10.0.0.7"},
+ "server": {"current_time": 1760000000,
+            "services": [{"name": "weather",
+                          "widgets": [{"name": "city_forecast",
+                                       "description": "Daily forecast for a city",
+                                       "params": [{"name": "city", "type": "string"},
+                                                  {"name": "days", "type": "integer"}]}]}]}}
+```
+
+Param types are mapped to that format's vocabulary: `Integer` → `integer`, `Boolean` →
+`boolean`, everything else → `string`. `client.host` is `REMOTE_ADDR`; set
+`ABOUT_TRUST_X_FORWARDED_FOR` only behind a reverse proxy that overwrites `X-Forwarded-For`,
+otherwise clients could choose the value.
 
 ## Development
 
