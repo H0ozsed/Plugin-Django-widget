@@ -121,6 +121,9 @@ Each entry: problem → options → choice → why → impact.
 - **Why:** a router cannot install API-wide exception handlers without touching the user's API,
   and one validation path keeps every adapter's errors identical. OpenAPI still documents the
   body through `openapi_extra`.
-- **Impact:** `widget_hub.api.handle()` applies `CsrfViewMiddleware` when the owner comes from the
-  session cookie and the method is unsafe; requests authenticated by the framework (`request.auth`
-  is a user) are left to that authenticator, as DRF and ninja already do.
+- **Impact:** `widget_hub.api.handle()` applies `CsrfViewMiddleware` to unsafe methods unless the
+  adapter reports that one of the framework's authenticators accepted the request (ninja:
+  `request.auth` set; DRF: `request.successful_authenticator`). Those either use non-cookie
+  credentials or enforce CSRF themselves. The first version keyed the check on where the default
+  resolver found the user and skipped it entirely under DRF; a security review showed that a
+  custom `OWNER_RESOLVER` reading the session bypassed it, hence the rule above (fail closed).

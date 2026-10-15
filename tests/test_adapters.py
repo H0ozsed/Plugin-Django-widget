@@ -224,6 +224,31 @@ def test_session_auth_requires_csrf_for_unsafe_methods(alice, name):
     assert create(api)[0] == 201
 
 
+def django_session_owner(request):
+    """An OWNER_RESOLVER reading Django's session user even under DRF."""
+    from django.contrib.auth import get_user
+
+    user = get_user(getattr(request, "_request", request))
+    return user if user.is_authenticated else None
+
+
+@pytest.mark.parametrize("name", ["drf-session", "ninja-token"])
+def test_csrf_enforced_when_owner_does_not_come_from_an_authenticator(alice, name, monkeypatch):
+    """Regression: a session-resolved owner must not bypass CSRF under API frameworks."""
+    from widget_hub.contrib.drf import WidgetInstanceViewSet
+
+    from .drf_auth import BearerUsername
+
+    monkeypatch.setattr(WidgetInstanceViewSet, "authentication_classes", [BearerUsername])
+    api = Api(ADAPTERS[name][0], "session", enforce_csrf=True).login(alice)
+    with override_settings(WIDGET_HUB={"OWNER_RESOLVER": django_session_owner}):
+        status, body = create(api)
+    assert status in (401, 403)  # ninja-token: rejected by the API's authenticator first
+    if name == "drf-session":
+        assert status == 403
+        assert body["error"]["message"] == "CSRF verification failed."
+
+
 @pytest.mark.parametrize("name", TOKEN_ADAPTERS)
 def test_token_auth_is_not_subject_to_csrf(alice, name):
     api = Api(*ADAPTERS[name], enforce_csrf=True).login(alice)

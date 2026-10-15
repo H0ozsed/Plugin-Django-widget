@@ -8,7 +8,9 @@ Include the router's URLs; views use your ``DEFAULT_AUTHENTICATION_CLASSES``::
 
 Routes match the django-ninja adapter: ``catalog``, ``instances``, ``instances/{id}`` and
 ``instances/{id}/data`` (no trailing slash by default). CSRF for session users is enforced by
-DRF's ``SessionAuthentication``. Bodies must be JSON; errors follow :mod:`widget_hub.errors`.
+DRF's ``SessionAuthentication``; when no DRF authenticator accepted the request (e.g. a custom
+``OWNER_RESOLVER`` reading Django's session), widget_hub applies Django's CSRF check itself.
+Bodies must be JSON; errors follow :mod:`widget_hub.errors`.
 """
 
 from __future__ import annotations
@@ -30,7 +32,15 @@ def _respond(result: api.Result) -> Response:
 
 
 def _handle(request: Request, name: str, operation: Any) -> Response:
-    return _respond(api.handle(request, name, operation, enforce_csrf=False))
+    request.user  # noqa: B018 - runs DRF authentication (SessionAuthentication checks CSRF)
+    return _respond(
+        api.handle(
+            request,
+            name,
+            operation,
+            framework_authenticated=request.successful_authenticator is not None,
+        )
+    )
 
 
 class CatalogViewSet(viewsets.ViewSet):

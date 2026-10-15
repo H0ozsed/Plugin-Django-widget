@@ -32,17 +32,17 @@ def handle(
     action: str,
     operation: Callable[[AbstractBaseUser], Result],
     *,
-    enforce_csrf: bool = True,
+    framework_authenticated: bool = False,
 ) -> Result:
     """Authenticate, authorise and run ``operation(owner)``, returning ``(status, body)``.
 
-    ``enforce_csrf=False`` is for frameworks whose authenticators already enforce CSRF on
-    cookie-based authentication (DRF's ``SessionAuthentication``).
+    Adapters pass ``framework_authenticated=True`` only when one of the framework's
+    authenticators accepted the request; otherwise unsafe methods must pass Django's CSRF check.
     """
     owner = resolve_owner(request)
     if owner is None:
         return 401, error_body("not_authenticated", "Authentication required.")
-    if enforce_csrf and csrf_rejected(request):
+    if csrf_rejected(request, framework_authenticated=framework_authenticated):
         return 403, error_body("permission_denied", "CSRF verification failed.")
     if not has_permission(request, owner, action):
         return 403, error_body("permission_denied", "Permission denied.")

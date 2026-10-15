@@ -33,3 +33,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   cookie-authenticated unsafe requests reaching CSRF-exempt API views.
 - DRF adapter `widget_hub.contrib.drf.build_router()` (`CatalogViewSet`, `WidgetInstanceViewSet`)
   with the same routes, responses and error contract as the ninja adapter.
+
+### Security
+
+- CSRF is now enforced on unsafe requests whenever no framework authenticator accepted the
+  request (previously the DRF adapter skipped the check entirely, so a custom `OWNER_RESOLVER`
+  reading Django's session could be driven cross-site).

@@ -48,18 +48,15 @@ def has_permission(request: HttpRequest, owner: AbstractBaseUser, action: str) -
     return True if check is None else bool(check(request, owner, action))
 
 
-def csrf_rejected(request: HttpRequest) -> bool:
-    """Return True if an unsafe request authenticated by session cookie fails Django's CSRF check.
+def csrf_rejected(request: HttpRequest, *, framework_authenticated: bool) -> bool:
+    """Return True if an unsafe request fails Django's CSRF check.
 
-    API frameworks mark their views ``csrf_exempt``. When the owner comes from the session cookie
-    (``request.user``) rather than from an API authenticator (``request.auth``), the request is
-    as forgeable as a form post, so the standard CSRF check is applied here.
+    API frameworks mark their views ``csrf_exempt``. Unless one of the framework's own
+    authenticators accepted the request (they either use non-cookie credentials or enforce CSRF
+    themselves, like DRF's ``SessionAuthentication``), the owner may come from the session cookie
+    and the request is as forgeable as a form post, so the standard CSRF check applies.
     """
-    if request.method in SAFE_METHODS:
-        return False
-    if isinstance(getattr(request, "auth", None), AbstractBaseUser):
-        return False  # authenticated by the API framework (token or its own CSRF-checked cookie)
-    if not getattr(request, "user", None) or not request.user.is_authenticated:
+    if request.method in SAFE_METHODS or framework_authenticated:
         return False
     middleware = CsrfViewMiddleware(lambda r: None)  # type: ignore[arg-type,return-value]
     middleware.process_request(request)

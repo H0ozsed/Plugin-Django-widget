@@ -44,6 +44,12 @@ _INSTANCE_BODY = {
 }
 
 
+def _run(request: HttpRequest, name: str, operation: Any) -> api.Result:
+    # ninja sets request.auth to whatever one of the API's authenticators returned.
+    authenticated = getattr(request, "auth", None) is not None
+    return api.handle(request, name, operation, framework_authenticated=authenticated)
+
+
 def _respond(result: api.Result) -> HttpResponse:
     status, body = result
     if body is None:
@@ -59,18 +65,18 @@ def build_router(**router_kwargs: Any) -> Router:
     @router.get("/catalog", operation_id="widget_hub_catalog")
     def catalog(request: HttpRequest) -> HttpResponse:
         """List registered widgets with their parameter schema."""
-        return _respond(api.handle(request, "catalog", api.catalog))
+        return _respond(_run(request, "catalog", api.catalog))
 
     @router.get("/instances", operation_id="widget_hub_list")
     def list_instances(request: HttpRequest) -> HttpResponse:
         """List the current user's widget instances."""
-        return _respond(api.handle(request, "list", api.list_instances))
+        return _respond(_run(request, "list", api.list_instances))
 
     @router.post("/instances", operation_id="widget_hub_create", openapi_extra=_INSTANCE_BODY)
     def create_instance(request: HttpRequest) -> HttpResponse:
         """Add a widget instance to the current user's dashboard."""
         return _respond(
-            api.handle(
+            _run(
                 request,
                 "create",
                 lambda owner: api.create_instance(owner, api.parse_json_body(request.body)),
@@ -80,9 +86,7 @@ def build_router(**router_kwargs: Any) -> Router:
     @router.get("/instances/{int:instance_id}", operation_id="widget_hub_retrieve")
     def retrieve_instance(request: HttpRequest, instance_id: int) -> HttpResponse:
         """Return one of the current user's instances (404 for anyone else's)."""
-        return _respond(
-            api.handle(request, "retrieve", lambda o: api.retrieve_instance(o, instance_id))
-        )
+        return _respond(_run(request, "retrieve", lambda o: api.retrieve_instance(o, instance_id)))
 
     @router.patch(
         "/instances/{int:instance_id}",
@@ -92,7 +96,7 @@ def build_router(**router_kwargs: Any) -> Router:
     def update_instance(request: HttpRequest, instance_id: int) -> HttpResponse:
         """Update params, refresh_rate and/or position of an instance."""
         return _respond(
-            api.handle(
+            _run(
                 request,
                 "update",
                 lambda o: api.update_instance(o, instance_id, api.parse_json_body(request.body)),
@@ -102,13 +106,11 @@ def build_router(**router_kwargs: Any) -> Router:
     @router.delete("/instances/{int:instance_id}", operation_id="widget_hub_delete")
     def delete_instance(request: HttpRequest, instance_id: int) -> HttpResponse:
         """Remove an instance from the dashboard."""
-        return _respond(
-            api.handle(request, "delete", lambda o: api.delete_instance(o, instance_id))
-        )
+        return _respond(_run(request, "delete", lambda o: api.delete_instance(o, instance_id)))
 
     @router.get("/instances/{int:instance_id}/data", operation_id="widget_hub_data")
     def instance_data(request: HttpRequest, instance_id: int) -> HttpResponse:
         """Return the widget's data for this instance (cached for its refresh rate)."""
-        return _respond(api.handle(request, "fetch", lambda o: api.fetch_data(o, instance_id)))
+        return _respond(_run(request, "fetch", lambda o: api.fetch_data(o, instance_id)))
 
     return router
