@@ -60,7 +60,7 @@ include = ["src/widget_hub", "tests", "LICENSE", "README.md", "CHANGELOG.md"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
-pythonpath = [".", "src"]
+pythonpath = [".", "src", "example"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
@@ -76,6 +76,7 @@ ignore = ["RUF012"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S104", "S105", "S106"]
 "example/**" = ["S105"]
+"example/**/tests/**" = ["S101"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["widget_hub"]

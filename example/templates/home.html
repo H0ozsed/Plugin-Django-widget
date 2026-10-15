@@ -1,14 +1,19 @@
-{% load widget_hub %}<!doctype html>
+{% load static widget_hub %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>widget_hub demo</title>
   <link rel="icon" href="data:,">
-  <style>body { margin: 0; padding: 16px; font-family: system-ui, sans-serif; }</style>
+  <style>
+    body { margin: 0; padding: 16px; font-family: system-ui, sans-serif; }
+    .demo-big { font-size: 2rem; margin: 0.2em 0; }
+    .demo-muted { color: var(--wh-muted); margin: 0; }
+  </style>
 </head>
 <body>
-  <p>Signed in as {{ request.user.get_username }} · <a href="{% url 'admin:index' %}">admin</a></p>
+  <p>Signed in as {{ request.user.get_username }} · <a href="{% url 'admin:index' %}">admin</a> · <a href="{% url 'widget_hub:about' %}">about.json</a></p>
   {% dashboard title="My dashboard" %}
+  <script src="{% static 'demo.js' %}" defer></script>
 </body>
 </html>

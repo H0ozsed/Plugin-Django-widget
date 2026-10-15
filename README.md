@@ -278,6 +278,28 @@ otherwise clients could choose the value.
 
 HTTP (`safe_fetch`), caching, threading and validation use the standard library and Django.
 
+## Example project
+
+![The example dashboard](docs/screenshot.png)
+
+`example/` is a runnable project with three widgets (`example/demo_widgets/widgets.py`):
+
+| Widget | Shows how to |
+|---|---|
+| `weather.current` | call a public API with fixed URLs (Open-Meteo, no key) and report "city not found" with `WidgetError` |
+| `rss.latest` | fetch a URL typed by the user through `safe_fetch` (try `http://169.254.169.254/`: refused) |
+| `github.my_repositories` | use the owner's stored token (`uses_credential`, `cache_per_owner`) |
+
+```bash
+pip install -e ".[dev]"
+cd example
+python manage.py migrate && python manage.py createsuperuser
+python manage.py runserver   # log in at /admin/, then open /
+```
+
+`example/static/demo.js` shows custom renderers; `pytest example/demo_widgets
+--ds=example_project.settings` runs the widgets' tests with canned HTTP responses.
+
 ## Development
 
 ```bash

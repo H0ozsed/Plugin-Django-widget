@@ -45,6 +45,8 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `WidgetHub.registerRenderer`), `dashboard.css` with light/dark themes, and a session-authenticated
   JSON API under `widget-hub/api/` in `widget_hub.urls`. `Widget.schema()` exposes
   `uses_credential`.
+- Example project: weather (public API), RSS (user URL through `safe_fetch`, DTDs refused) and
+  GitHub (stored token) widgets with custom renderers and tests.
 
 ### Security
 

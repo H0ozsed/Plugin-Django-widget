@@ -58,6 +58,8 @@ jobs:
           allow-prereleases: true
       - run: pip install -e ".[dev]" "Django~=${{ matrix.django }}.0"
       - run: pytest --cov=widget_hub --cov-report=term-missing
+      - name: Example widgets
+        run: pytest example/demo_widgets --ds=example_project.settings -p no:cacheprovider
       - name: Example project starts
         working-directory: example
         env:
