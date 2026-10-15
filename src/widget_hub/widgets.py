@@ -53,7 +53,9 @@ class Widget:
     * ``name`` (``str``, required, unique within the service)
     * ``description`` (``str``)
     * ``params`` (list of :class:`~widget_hub.params.Param`)
-    * ``default_refresh_rate`` (seconds, ``int``)
+    * ``default_refresh_rate`` (seconds, ``int``; raised to ``MIN_REFRESH_RATE`` if lower)
+    * ``cache_per_owner`` (``bool``): set it when ``fetch()`` returns user-specific data, so
+      cached results are never shared between owners.
     """
 
     service: ClassVar[Service]
@@ -61,6 +63,7 @@ class Widget:
     description: ClassVar[str] = ""
     params: ClassVar[list[Param]] = []
     default_refresh_rate: ClassVar[int] = 300
+    cache_per_owner: ClassVar[bool] = False
 
     @classmethod
     def check_declaration(cls) -> None:

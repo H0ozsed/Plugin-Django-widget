@@ -61,3 +61,27 @@ Each entry: problem → options → choice → why → impact.
   required positional argument. Others' instances raise `NotFound` (→ 404) so ids cannot be probed.
 - **Impact:** adapters are thin translations of exceptions to HTTP responses. Stored params are
   re-validated before `fetch()`, so a widget whose declaration changed never receives stale input.
+
+## D7. Cache scope and freshness
+
+- **Problem:** the plan keys the cache by (widget, params), but a widget returning user-specific
+  data (private repositories via a stored token) must never serve one user's data to another.
+- **Options:** (a) always per owner (safe, loses sharing); (b) always shared (efficient, leaks);
+  (c) shared by default, opt-in `cache_per_owner = True`.
+- **Choice:** (c). Step 11 makes credential access refuse to work unless `cache_per_owner` is set,
+  so the unsafe combination cannot be written by accident.
+- **Freshness:** entries store `fetched_at`; a reader accepts an entry only if it is younger than
+  its own `refresh_rate`, so instances sharing params with different rates both get what they
+  asked for. Non-JSON results are rejected before being cached.
+
+## D8. Enforcing the fetch timeout
+
+- **Problem:** a slow upstream must not block a request worker indefinitely; `fetch()` is
+  arbitrary user code that may not set its own timeouts.
+- **Options:** (a) trust widgets to pass timeouts; (b) `signal.alarm` (main thread, Unix only);
+  (c) run `fetch()` in a worker thread and stop waiting after `FETCH_TIMEOUT`.
+- **Choice:** (c), stdlib `concurrent.futures`.
+- **Why:** works under any WSGI/ASGI server and OS. Threads cannot be killed, so an abandoned call
+  finishes in the background; `safe_fetch()` sets socket timeouts so it always ends. Worker threads
+  close their own DB connections.
+- **Impact:** one short-lived thread per cache miss; documented in Limitations.

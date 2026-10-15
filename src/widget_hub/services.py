@@ -14,7 +14,9 @@ from typing import Any
 from django.contrib.auth.models import AbstractBaseUser
 from django.db.models import QuerySet
 
+from . import conf
 from .exceptions import InvalidInput, NotFound, ParamValidationError
+from .fetching import FetchResult, cached_fetch
 from .models import WidgetInstance
 from .registry import registry
 from .widgets import Widget
@@ -84,17 +86,23 @@ def create_instance(
 ) -> WidgetInstance:
     """Validate the payload and create an instance owned by ``owner``.
 
-    ``refresh_rate`` defaults to the widget's ``default_refresh_rate``; ``position`` to ``{}``.
+    ``refresh_rate`` defaults to the widget's ``default_refresh_rate`` (kept within the
+    ``MIN_REFRESH_RATE``/``MAX_REFRESH_RATE`` settings); ``position`` defaults to ``{}``.
     """
     widget_obj = registry.get(service, widget)
     if widget_obj is None:
         raise InvalidInput({"widget": f"Unknown widget {service}.{widget}."})
+    if refresh_rate is None:
+        refresh_rate = min(
+            max(widget_obj.default_refresh_rate, conf.get("MIN_REFRESH_RATE")),
+            conf.get("MAX_REFRESH_RATE"),
+        )
     errors: dict[str, object] = {}
     cleaned = _clean_fields(
         widget_obj,
         errors,
         params=params,
-        refresh_rate=widget_obj.default_refresh_rate if refresh_rate is None else refresh_rate,
+        refresh_rate=refresh_rate,
         position={} if position is None else position,
     )
     if errors:
@@ -135,12 +143,24 @@ def delete_instance(owner: AbstractBaseUser, instance_id: Any) -> None:
     get_instance(owner, instance_id).delete()
 
 
-def fetch_instance_data(owner: AbstractBaseUser, instance_id: Any) -> Any:
-    """Run the widget's ``fetch()`` for the owner's instance and return its data."""
+def fetch_instance_data(owner: AbstractBaseUser, instance_id: Any) -> FetchResult:
+    """Return the data of the owner's instance, from the cache when it is recent enough.
+
+    The cache entry may be at most ``instance.refresh_rate`` seconds old (never less than
+    ``MIN_REFRESH_RATE``), so calling this in a loop never reaches the upstream API more than
+    once per refresh period. ``fetch()`` is interrupted after ``FETCH_TIMEOUT`` seconds
+    (:class:`~widget_hub.fetching.FetchTimeout`).
+    """
     instance = get_instance(owner, instance_id)
     widget_obj = get_widget(instance.service, instance.widget)
     params = widget_obj.validate(instance.params)
-    return widget_obj.fetch(params, FetchContext(owner=owner, instance_id=instance.pk))
+    return cached_fetch(
+        widget_obj,
+        params,
+        FetchContext(owner=owner, instance_id=instance.pk),
+        max_age=max(instance.refresh_rate, conf.get("MIN_REFRESH_RATE")),
+        owner_id=owner.pk,
+    )
 
 
 def _clean_fields(widget: Widget, errors: dict[str, object], **fields: Any) -> dict[str, Any]:
@@ -152,8 +172,11 @@ def _clean_fields(widget: Widget, errors: dict[str, object], **fields: Any) -> d
             errors["params"] = exc.errors
     if "refresh_rate" in fields:
         value = fields["refresh_rate"]
-        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-            errors["refresh_rate"] = "Must be a positive integer (seconds)."
+        minimum, maximum = conf.get("MIN_REFRESH_RATE"), conf.get("MAX_REFRESH_RATE")
+        if isinstance(value, bool) or not isinstance(value, int):
+            errors["refresh_rate"] = "Must be an integer number of seconds."
+        elif not minimum <= value <= maximum:
+            errors["refresh_rate"] = f"Must be between {minimum} and {maximum} seconds."
         else:
             cleaned["refresh_rate"] = value
     if "position" in fields:

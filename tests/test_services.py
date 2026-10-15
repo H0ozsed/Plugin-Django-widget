@@ -36,7 +36,7 @@ def test_create_reports_every_invalid_field(alice):
         create(alice, params={"times": "x"}, refresh_rate=0, position={"x": -1})
     assert info.value.errors == {
         "params": {"text": "This parameter is required.", "times": "Expected an integer."},
-        "refresh_rate": "Must be a positive integer (seconds).",
+        "refresh_rate": "Must be between 30 and 86400 seconds.",
         "position": "x must be between 0 and 1000.",
     }
     assert WidgetInstance.objects.count() == 0
@@ -73,7 +73,7 @@ def test_list_is_scoped_to_owner(alice, bob):
     "action",
     [
         lambda owner, pk: services.get_instance(owner, pk),
-        lambda owner, pk: services.update_instance(owner, pk, refresh_rate=10),
+        lambda owner, pk: services.update_instance(owner, pk, refresh_rate=60),
         lambda owner, pk: services.delete_instance(owner, pk),
         lambda owner, pk: services.fetch_instance_data(owner, pk),
     ],
@@ -120,7 +120,7 @@ def test_delete(alice):
 
 def test_fetch_passes_validated_params_and_context(alice):
     instance = create(alice, params={"text": "ab", "times": 2})
-    assert services.fetch_instance_data(alice, instance.pk) == {"text": "abab"}
+    assert services.fetch_instance_data(alice, instance.pk).data == {"text": "abab"}
 
 
 def test_fetch_revalidates_stored_params(alice):

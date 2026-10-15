@@ -60,6 +60,32 @@ They raise `InvalidInput(errors)` (400) or `NotFound` (404); another user's inst
 `NotFound`, never a 403. `fetch()` receives the validated params and a `FetchContext(owner,
 instance_id)`.
 
+## Configuration
+
+All settings live in one dict; every key is optional and unknown keys fail `manage.py check`
+(`widget_hub.E001`–`E004`).
+
+```python
+WIDGET_HUB = {
+    "CACHE_ALIAS": "default",  # alias in CACHES used for fetch() results
+    "CACHE_PREFIX": "widget_hub",  # prefix of every cache key
+    "MIN_REFRESH_RATE": 30,  # seconds; lower refresh rates are rejected
+    "MAX_REFRESH_RATE": 86400,  # seconds; higher refresh rates are rejected
+    "FETCH_TIMEOUT": 10.0,  # seconds a single fetch() may run
+}
+```
+
+## Caching and rate limits
+
+`fetch()` results are cached with Django's cache framework (the `CACHE_ALIAS` backend; Django's
+default is LocMem, use Redis/Memcached in production to share it between processes). The key is
+`(service, widget, normalised params)`, so a hundred users showing the weather in Paris cause one
+upstream call per refresh period. Set `cache_per_owner = True` on a widget whose data depends on
+the user. An entry is reused while it is younger than the instance's `refresh_rate`, and refresh
+rates must stay within `MIN_REFRESH_RATE`–`MAX_REFRESH_RATE`: calling the data endpoint in a loop
+never reaches the external API more than once per period. Each `fetch()` runs in a worker thread
+and is abandoned after `FETCH_TIMEOUT` seconds.
+
 ## Development
 
 ```bash

@@ -19,3 +19,6 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   position, timestamps), its initial migration and admin; `clean()` validates params.
 - Framework-agnostic service layer (`widget_hub.services`): owner-scoped list/get/create/update/
   delete, `fetch_instance_data`, `FetchContext`, `InvalidInput` and `NotFound` exceptions.
+- `WIDGET_HUB` settings dict with system checks; `fetch()` results cached per
+  (widget, normalised params) through Django's cache framework, `Widget.cache_per_owner`,
+  `MIN_REFRESH_RATE`/`MAX_REFRESH_RATE` enforcement and a per-call `FETCH_TIMEOUT`.

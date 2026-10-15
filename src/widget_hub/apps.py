@@ -12,5 +12,7 @@ class WidgetHubConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self) -> None:
-        """Autodiscover ``<app>/widgets.py`` so ``@register`` decorators run at startup."""
+        """Register system checks and autodiscover ``<app>/widgets.py`` modules."""
+        from . import checks  # noqa: F401 - registers the system checks
+
         autodiscover_modules("widgets")
