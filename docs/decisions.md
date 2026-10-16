@@ -182,7 +182,9 @@ Each entry: problem → options → choice → why → impact.
 - **Choice:** a `Release` workflow on `vX.Y.Z` tags: it checks the tag against
   `widget_hub.__version__`, builds, runs `twine check --strict` and publishes to TestPyPI with
   `pypa/gh-action-pypi-publish` and OIDC trusted publishing (`environment: testpypi`,
-  `id-token: write`). There is deliberately no PyPI job yet. CI also builds the wheel, installs it
+  `id-token: write`). The PyPI job was added once the maintainer confirmed the TestPyPI release
+  (environment `pypi`, after the TestPyPI job; a manual run republishes an existing tag, whose
+  name is validated before being used as a ref). CI also builds the wheel, installs it
   in a fresh virtualenv and runs the example project against it, so packaging mistakes (missing
   templates, static files or migrations) fail before a release.
 - **Impact:** the TestPyPI project must be configured once with this repository, workflow

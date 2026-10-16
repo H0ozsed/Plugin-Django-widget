@@ -47,5 +47,7 @@ A change is done when:
 2. Move `[Unreleased]` entries in `CHANGELOG.md` under the new version with today's date.
 3. Commit (`chore: release vX.Y.Z`), then `git tag vX.Y.Z && git push origin vX.Y.Z`.
 4. The `Release` workflow checks the tag against `__version__`, builds, runs `twine check` and
-   publishes to TestPyPI through trusted publishing.
-5. Publishing to PyPI happens only after the TestPyPI release has been checked.
+   publishes to TestPyPI, then to PyPI, through trusted publishing (environments `testpypi` and
+   `pypi`; add required reviewers to `pypi` to approve each PyPI upload by hand).
+5. To (re)publish an existing tag, run the `Release` workflow manually with that tag. PyPI never
+   accepts the same version twice: fix mistakes with a new version.

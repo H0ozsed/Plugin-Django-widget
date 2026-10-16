@@ -1,12 +1,18 @@
 name: Release
 
-# Pushing a tag vX.Y.Z builds the package and publishes it to TestPyPI with trusted publishing
-# (OIDC, no token stored in the repository). Publishing to the real PyPI is deliberately not
-# automated: it is done only after the maintainer confirms a TestPyPI release.
+# Pushing a tag vX.Y.Z builds the package, publishes it to TestPyPI, then to PyPI, with trusted
+# publishing (OIDC, no token stored in the repository). The PyPI job runs in the "pypi"
+# environment: add required reviewers to it in the repository settings to approve each release
+# by hand. "Run workflow" (workflow_dispatch) republishes an existing tag.
 
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish, e.g. v0.1.0"
+        required: true
 
 permissions:
   contents: read
@@ -15,13 +21,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve and validate the tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          TAG="${INPUT_TAG:-$REF_NAME}"
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag: $TAG" >&2
+            exit 1
+          fi
+          echo "name=$TAG" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.name }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
       - name: Tag must match widget_hub.__version__
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.tag.outputs.name }}
         run: |
           VERSION=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/widget_hub/__init__.py)
           echo "tag=$TAG version=$VERSION"
@@ -50,3 +70,19 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  pypi:
+    needs: testpypi
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/django-widget-hub
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

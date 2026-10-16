@@ -27,7 +27,5 @@ After a session restart, read this first and resume from the first unchecked ste
 
 - Step 15 was carried out inside this repository on the maintainer's instruction (decision D1);
   the Epitech repository was only read.
-- TestPyPI trusted publisher configured by the maintainer (project `django-widget-hub`,
-  environment `testpypi`); `v0.1.0` tagged.
-- Publishing to the real PyPI waits for explicit confirmation (needs a `pypi` trusted publisher
-  and a PyPI job in `release.yml`).
+- Trusted publishers configured by the maintainer on TestPyPI (`testpypi`) and PyPI (`pypi`);
+  publishing `v0.1.0` to PyPI confirmed by the maintainer on 2026-10-16.
