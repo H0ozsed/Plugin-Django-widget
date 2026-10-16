@@ -1,5 +1,10 @@
 # django-widget-hub
 
+[![PyPI](https://img.shields.io/pypi/v/django-widget-hub)](https://pypi.org/project/django-widget-hub/)
+[![Python](https://img.shields.io/pypi/pyversions/django-widget-hub)](https://pypi.org/project/django-widget-hub/)
+[![CI](https://github.com/H0ozsed/Plugin-Django-widget/actions/workflows/ci.yml/badge.svg)](https://github.com/H0ozsed/Plugin-Django-widget/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Declare a dashboard widget once in Python, and get parameter validation, caching, owner-scoped
 CRUD, an `/about.json` discovery endpoint, django-ninja and DRF adapters, and a ready-made front.
 
