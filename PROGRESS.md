@@ -3,7 +3,7 @@
 Live checklist for `django-widget-hub` (import `widget_hub`, setting `WIDGET_HUB`).
 After a session restart, read this first and resume from the first unchecked step.
 
-**Current step:** all 15 steps done — waiting for the first release (see open questions).
+**Current step:** all 15 steps done; `v0.1.0` released to TestPyPI on 2026-10-16.
 
 ## Plan (one feature = one commit = one push)
 
@@ -27,8 +27,7 @@ After a session restart, read this first and resume from the first unchecked ste
 
 - Step 15 was carried out inside this repository on the maintainer's instruction (decision D1);
   the Epitech repository was only read.
-- First release `v0.1.0`: the TestPyPI trusted publisher must be configured by the maintainer
-  before the tag is pushed (project `django-widget-hub`, owner `H0ozsed`, repository
-  `Plugin-Django-widget`, workflow `release.yml`, environment `testpypi`). Then: bump
-  `__version__` to `0.1.0`, date the CHANGELOG section, tag `v0.1.0`.
-- Publishing to the real PyPI waits for explicit confirmation.
+- TestPyPI trusted publisher configured by the maintainer (project `django-widget-hub`,
+  environment `testpypi`); `v0.1.0` tagged.
+- Publishing to the real PyPI waits for explicit confirmation (needs a `pypi` trusted publisher
+  and a PyPI job in `release.yml`).

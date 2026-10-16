@@ -5,7 +5,7 @@ from .exceptions import ParamValidationError, WidgetError
 from .registry import register, registry
 from .widgets import Service, Widget
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0"
 
 __all__ = [
     "ParamValidationError",

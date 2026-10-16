@@ -6,6 +6,10 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-16
+
+First release.
+
 ### Added
 
 - Project skeleton: src layout, `widget_hub` app config, pytest-django test suite, demo project
@@ -93,3 +97,6 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `safe_fetch()` DNS resolution is bounded by the remaining deadline: `getaddrinfo` has no timeout
   and a slow authoritative DNS server, chosen by whoever controls the URL, extended every hop.
   Pending lookups, abandoned ones included, are capped by `MAX_CONCURRENT_FETCHES`.
+
+[Unreleased]: https://github.com/H0ozsed/Plugin-Django-widget/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/H0ozsed/Plugin-Django-widget/releases/tag/v0.1.0
