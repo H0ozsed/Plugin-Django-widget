@@ -131,16 +131,22 @@ def test_cached_fetch_uses_timeout_setting():
 
 @override_settings(WIDGET_HUB={"MAX_CONCURRENT_FETCHES": 1, "FETCH_TIMEOUT": 0.05})
 def test_abandoned_fetches_count_against_the_concurrency_cap():
+    wait_until_idle()  # threads released by earlier tests may not have returned yet
     slow = Slow()
     with pytest.raises(FetchTimeout):
         run_with_timeout(slow, {}, None, 0.05)  # times out, thread keeps running
     with pytest.raises(WidgetUnavailable):
         run_with_timeout(Counting(), {"q": "a"}, None, 1)  # no slot left
     slow.release.set()
-    deadline = time.monotonic() + 2
+    wait_until_idle()
+    assert run_with_timeout(Counting(), {"q": "a"}, None, 1) == {"q": "a", "call": 1}
+
+
+def wait_until_idle(timeout=5):
+    deadline = time.monotonic() + timeout
     while fetching.in_flight() and time.monotonic() < deadline:
         time.sleep(0.01)
-    assert run_with_timeout(Counting(), {"q": "a"}, None, 1) == {"q": "a", "call": 1}
+    assert fetching.in_flight() == 0
 
 
 @pytest.mark.django_db
