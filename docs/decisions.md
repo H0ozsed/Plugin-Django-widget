@@ -54,6 +54,12 @@ Each entry: problem → options → choice → why → impact.
   `widgets.py` modules are imported in `AppConfig.ready()` so the error happens at startup, not on
   first request.
 - **Impact:** a misconfigured project does not start; tests can build isolated `WidgetRegistry()`.
+- **Why not a system check for duplicates:** checks can be silenced (`SILENCED_SYSTEM_CHECKS`) and
+  are not run by production servers such as gunicorn; raising during registration fails
+  everywhere. Checks are used where a warning is the right answer: rows stored for a widget that
+  was renamed or removed (`widget_hub.W002`, a database check run by `migrate` and
+  `check --database`, skipped while the table does not exist yet). Suggested by a reader of the
+  project announcement.
 
 ## D6. A service layer below the HTTP adapters
 

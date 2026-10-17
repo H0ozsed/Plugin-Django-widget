@@ -231,6 +231,10 @@ Two widgets with the same service and name, or two `Service` objects with the sa
 the server with an `ImproperlyConfigured` error naming both declarations. Other class attributes:
 `cache_per_owner` (results depend on the user) and `uses_credential` (see Security).
 
+Renamed or removed a widget? Stored instances still pointing to the old name answer 404. The
+database check `widget_hub.W002` lists them with their count; it runs with `migrate` and
+`python manage.py check --database default`.
+
 ## Params reference
 
 | Param | Options | Accepts | `/about.json` type |

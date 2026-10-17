@@ -1,11 +1,13 @@
-"""System checks validating the ``WIDGET_HUB`` setting."""
+"""System checks: the ``WIDGET_HUB`` setting, and stored instances of unknown widgets."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from django.conf import settings
-from django.core.checks import CheckMessage, Error, Warning, register
+from django.core.checks import CheckMessage, Error, Tags, Warning, register
+from django.db import DatabaseError
+from django.db.models import Count
 from django.utils.module_loading import import_string
 
 from . import conf
@@ -81,3 +83,42 @@ def check_settings(app_configs: Any = None, **kwargs: Any) -> list[CheckMessage]
             )
         )
     return errors
+
+
+@register(Tags.database)
+def check_stored_widgets(
+    app_configs: Any = None, databases: Any = None, **kwargs: Any
+) -> list[CheckMessage]:
+    """Warn about stored instances whose widget is no longer registered (renamed or removed).
+
+    A database check: it runs with ``migrate`` and ``manage.py check --database default``, not
+    with a plain ``check``. Such instances answer 404 until they are renamed or deleted.
+    """
+    from .models import WidgetInstance
+    from .registry import registry
+
+    warnings: list[CheckMessage] = []
+    for alias in databases or []:
+        try:
+            rows = list(
+                WidgetInstance.objects.using(alias)
+                .values("service", "widget")
+                .annotate(count=Count("id"))
+                .order_by("service", "widget")
+            )
+        except DatabaseError:
+            continue  # table not created yet (first migrate)
+        for row in rows:
+            if registry.get(row["service"], row["widget"]) is None:
+                name = f"{row['service']}.{row['widget']}"
+                warnings.append(
+                    Warning(
+                        f"{row['count']} widget instance(s) in database {alias!r} use {name!r}, "
+                        "which is not registered.",
+                        hint="If the widget was renamed, update the rows with a data migration; "
+                        "if it was removed, delete them. Until then they answer 404.",
+                        obj=name,
+                        id="widget_hub.W002",
+                    )
+                )
+    return warnings

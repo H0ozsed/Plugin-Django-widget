@@ -6,6 +6,12 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Database check `widget_hub.W002`: warns about stored widget instances whose widget is no longer
+  registered (renamed or removed), with their count. Runs with `migrate` and
+  `manage.py check --database`.
+
 ## [0.1.0] - 2026-10-16
 
 First release.
